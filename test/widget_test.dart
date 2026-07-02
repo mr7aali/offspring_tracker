@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:offspring_tracker/main.dart';
+import 'package:offspring_tracker/app.dart';
+import 'package:offspring_tracker/config/dependency_injection.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUp(setupDependencies);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('shows parent auth entry point', (WidgetTester tester) async {
+    await tester.pumpWidget(const OffspringTrackerApp());
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Offspring Tracker'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Use demo parent'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('demo parent can open dashboard', (WidgetTester tester) async {
+    await tester.pumpWidget(const OffspringTrackerApp());
+
+    final demoButton = find.text('Use demo parent');
+    await tester.ensureVisible(demoButton);
+    await tester.pumpAndSettle();
+    await tester.tap(demoButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parent dashboard'), findsOneWidget);
+    expect(find.text('Maya'), findsWidgets);
+    expect(find.text('Pair device'), findsOneWidget);
   });
 }
