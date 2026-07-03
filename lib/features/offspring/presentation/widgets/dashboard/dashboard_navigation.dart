@@ -101,79 +101,113 @@ class _AnimatedDashboardBottomNav extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              blurRadius: 28,
-              offset: const Offset(0, 14),
-            ),
-            BoxShadow(
-              color: AppColors.ink.withValues(alpha: 0.08),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final selectedIndex = _dashboardDestinations.indexWhere(
-              (destination) => destination.section == controller.section,
-            );
-            final itemWidth =
-                constraints.maxWidth / _dashboardDestinations.length;
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.62),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.16),
+                        blurRadius: 30,
+                        offset: const Offset(0, 16),
+                      ),
+                      BoxShadow(
+                        color: AppColors.ink.withValues(alpha: 0.1),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final selectedIndex = _dashboardDestinations
+                              .indexWhere(
+                                (destination) =>
+                                    destination.section == controller.section,
+                              );
+                          final itemWidth =
+                              constraints.maxWidth /
+                              _dashboardDestinations.length;
+                          final indicatorWidth = itemWidth < 52
+                              ? itemWidth - 4
+                              : 52.0;
+                          final indicatorLeft =
+                              (itemWidth * selectedIndex) +
+                              ((itemWidth - indicatorWidth) / 2);
 
-            return SizedBox(
-              height: 56,
-              child: Stack(
-                children: [
-                  AnimatedPositioned(
-                    duration: duration,
-                    curve: Curves.easeOutCubic,
-                    left: itemWidth * selectedIndex,
-                    top: 0,
-                    bottom: 0,
-                    width: itemWidth,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.28),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
+                          return SizedBox(
+                            height: 58,
+                            child: Stack(
+                              children: [
+                                AnimatedPositioned(
+                                  duration: duration,
+                                  curve: Curves.easeOutCubic,
+                                  left: indicatorLeft,
+                                  top: 3,
+                                  bottom: 3,
+                                  width: indicatorWidth,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(22),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(
+                                            alpha: 0.32,
+                                          ),
+                                          blurRadius: 18,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    for (final destination
+                                        in _dashboardDestinations)
+                                      Expanded(
+                                        child: _AnimatedDashboardBottomNavItem(
+                                          destination: destination,
+                                          selected:
+                                              controller.section ==
+                                              destination.section,
+                                          onTap: () => controller.showSection(
+                                            destination.section,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      for (final destination in _dashboardDestinations)
-                        Expanded(
-                          child: _AnimatedDashboardBottomNavItem(
-                            destination: destination,
-                            selected: controller.section == destination.section,
-                            onTap: () =>
-                                controller.showSection(destination.section),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -205,13 +239,13 @@ class _AnimatedDashboardBottomNavItem extends StatelessWidget {
       child: Tooltip(
         message: destination.label,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           onTap: selected ? null : onTap,
           child: AnimatedContainer(
             duration: duration,
             curve: Curves.easeOutCubic,
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             decoration: const BoxDecoration(color: Colors.transparent),
             child: AnimatedSwitcher(
               duration: duration,
@@ -228,7 +262,7 @@ class _AnimatedDashboardBottomNavItem extends StatelessWidget {
                       key: const ValueKey('selected'),
                       child: Icon(
                         destination.selectedIcon,
-                        size: 30,
+                        size: 27,
                         color: Colors.white,
                       ),
                     )
@@ -270,8 +304,14 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.pagePadding),
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.pagePadding,
+        AppSizes.pagePadding,
+        AppSizes.pagePadding,
+        isWide ? AppSizes.pagePadding : 104,
+      ),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1180),

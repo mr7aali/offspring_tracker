@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../../../config/dependency_injection.dart';
@@ -69,6 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final isWide = MediaQuery.sizeOf(context).width >= 900;
         final summary = _controller.summary;
         return Scaffold(
+          extendBody: !isWide,
           drawer: _DashboardDrawer(controller: _controller, onLogout: _logout),
           appBar: AppBar(
             titleSpacing: 16,
