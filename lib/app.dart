@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'core/constants/app_strings.dart';
 import 'core/routes/app_routes.dart';
 import 'core/routes/route_names.dart';

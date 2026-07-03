@@ -18,6 +18,33 @@ import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
 
+final List<_SupportTicket> _demoSupportTickets = [
+  _SupportTicket(
+    id: 'SUP-1002',
+    subject: 'Pairing code expired for Leo phone',
+    description:
+        'The child device shows the old pairing code and does not connect after refresh.',
+    category: _SupportTicketCategory.pairing,
+    priority: _SupportTicketPriority.high,
+    status: _SupportTicketStatus.open,
+    requesterEmail: AppStrings.demoEmail,
+    createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+    updatedAt: DateTime.now().subtract(const Duration(hours: 2)),
+  ),
+  _SupportTicket(
+    id: 'SUP-1001',
+    subject: 'Need help reviewing website rules',
+    description:
+        'Some blocked domains still appear in browser search results. Please confirm if this is expected.',
+    category: _SupportTicketCategory.webRules,
+    priority: _SupportTicketPriority.normal,
+    status: _SupportTicketStatus.waitingParent,
+    requesterEmail: AppStrings.demoEmail,
+    createdAt: DateTime.now().subtract(const Duration(days: 2)),
+    updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+  ),
+];
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -52,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final isWide = MediaQuery.sizeOf(context).width >= 900;
         final summary = _controller.summary;
         return Scaffold(
+          drawer: _DashboardDrawer(controller: _controller, onLogout: _logout),
           appBar: AppBar(
             titleSpacing: 16,
             title: Row(
@@ -92,10 +120,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
-              IconButton(
-                tooltip: 'Sign out',
-                onPressed: _logout,
-                icon: const Icon(Icons.logout),
+              Builder(
+                builder: (context) {
+                  return IconButton(
+                    tooltip: 'Account and settings',
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                    icon: const Icon(Icons.manage_accounts_outlined),
+                  );
+                },
               ),
               const SizedBox(width: 8),
             ],
@@ -163,6 +195,227 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
         );
       },
+    );
+  }
+}
+
+class _DashboardDrawer extends StatelessWidget {
+  const _DashboardDrawer({required this.controller, required this.onLogout});
+
+  final DashboardController controller;
+  final Future<void> Function() onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = appDependencies.authController.currentUser;
+    final summary = controller.summary;
+    final childCount = summary?.totalDevices ?? controller.devices.length;
+    final onlineCount =
+        summary?.onlineDevices ??
+        controller.devices.where((device) => device.isOnline).length;
+
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            _DrawerProfileHeader(
+              name: user?.name ?? 'Parent account',
+              email: user?.email ?? AppStrings.demoEmail,
+              planName: summary?.currentPlanName ?? user?.planName ?? 'Free',
+              childCount: childCount,
+              onlineCount: onlineCount,
+            ),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _DrawerSectionLabel(label: 'Account'),
+                  ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: const Text('Profile'),
+                    subtitle: const Text('Parent account and plan'),
+                    onTap: () {
+                      _runAfterDrawerClose(
+                        context,
+                        (context) => _openProfileScreen(context, controller),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined),
+                    title: const Text('Privacy Policy'),
+                    subtitle: const Text(
+                      'How parent and child data is handled',
+                    ),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openPrivacyPolicyScreen);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: const Text('Terms & Conditions'),
+                    subtitle: const Text('Rules for using the service'),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openTermsScreen);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.security_outlined),
+                    title: const Text('Data & permissions'),
+                    subtitle: const Text('Device access used for protection'),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openDataPermissionsScreen);
+                    },
+                  ),
+                  const Divider(height: 20),
+                  _DrawerSectionLabel(label: 'Support'),
+                  ListTile(
+                    leading: const Icon(Icons.support_agent_outlined),
+                    title: const Text('Support tickets'),
+                    subtitle: const Text('Create and manage help requests'),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openSupportScreen);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline),
+                    iconColor: AppColors.danger,
+                    textColor: AppColors.danger,
+                    title: const Text('Delete account'),
+                    subtitle: const Text('Request removal of account data'),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openDeleteAccountScreen);
+                    },
+                  ),
+                  const Divider(height: 20),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('About'),
+                    subtitle: const Text('Version and app information'),
+                    onTap: () {
+                      _runAfterDrawerClose(context, _openAboutScreen);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await onLogout();
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sign out'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerProfileHeader extends StatelessWidget {
+  const _DrawerProfileHeader({
+    required this.name,
+    required this.email,
+    required this.planName,
+    required this.childCount,
+    required this.onlineCount,
+  });
+
+  final String name;
+  final String email;
+  final String planName;
+  final int childCount;
+  final int onlineCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppColors.primary,
+            child: Text(
+              _initialsFor(name),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            email,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              StatusPill(
+                label: '$planName plan',
+                icon: Icons.workspace_premium_outlined,
+                color: AppColors.accent,
+              ),
+              StatusPill(
+                label: '$onlineCount/$childCount online',
+                icon: Icons.devices_other,
+                color: AppColors.secondary,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrawerSectionLabel extends StatelessWidget {
+  const _DrawerSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: AppColors.muted,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0,
+        ),
+      ),
     );
   }
 }
@@ -823,35 +1076,105 @@ class _DeviceMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedId = controller.selectedDevice?.id;
-    final menu = DropdownButtonFormField<String>(
-      initialValue: selectedId,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Selected child device',
-        prefixIcon: Icon(Icons.smartphone),
-      ),
-      items: [
-        for (final device in controller.devices)
-          DropdownMenuItem(
-            value: device.id,
-            child: Text('${device.childName} - ${device.deviceName}'),
+    final selectedDeviceExists = controller.devices.any(
+      (device) => device.id == selectedId,
+    );
+    final effectiveSelectedId = selectedDeviceExists ? selectedId : null;
+    final canSelect = !controller.isLoading && controller.devices.isNotEmpty;
+
+    final menu = LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return DropdownButtonFormField<String>(
+          key: ValueKey(effectiveSelectedId),
+          initialValue: effectiveSelectedId,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'Child device',
+            hintText: canSelect ? 'Select a device' : 'No devices paired',
+            prefixIcon: const Icon(Icons.smartphone),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 12,
+              vertical: compact ? 12 : 16,
+            ),
           ),
-      ],
-      onChanged: controller.isLoading || controller.devices.isEmpty
-          ? null
-          : (value) {
-              if (value != null) {
-                controller.selectDevice(value);
-              }
-            },
+          items: [
+            for (final device in controller.devices)
+              DropdownMenuItem(
+                value: device.id,
+                child: _DeviceMenuItem(device: device),
+              ),
+          ],
+          selectedItemBuilder: (context) => [
+            for (final device in controller.devices)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  compact
+                      ? device.childName
+                      : '${device.childName} - ${device.deviceName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: canSelect
+              ? (value) {
+                  if (value != null) {
+                    controller.selectDevice(value);
+                  }
+                }
+              : null,
+        );
+      },
     );
 
     if (expanded) {
       return menu;
     }
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 320),
+      constraints: const BoxConstraints(maxWidth: 360),
       child: menu,
+    );
+  }
+}
+
+class _DeviceMenuItem extends StatelessWidget {
+  const _DeviceMenuItem({required this.device});
+
+  final ChildDevice device;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        OnlineStatusPill(isOnline: device.isOnline),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                device.childName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                device.deviceName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -930,24 +1253,47 @@ class _ProtectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: enabled ? AppColors.secondary : AppColors.muted),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          StatusPill(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 360;
+          final title = Row(
+            children: [
+              Icon(
+                icon,
+                color: enabled ? AppColors.secondary : AppColors.muted,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          );
+          final status = StatusPill(
             label: enabled ? 'Active' : 'Needs setup',
             icon: enabled ? Icons.check_circle : Icons.info_outline,
             color: enabled ? AppColors.secondary : AppColors.accent,
-          ),
-        ],
+          );
+
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 8), status],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 10),
+              status,
+            ],
+          );
+        },
       ),
     );
   }
@@ -977,42 +1323,72 @@ class _DeviceListCard extends StatelessWidget {
               InkWell(
                 borderRadius: BorderRadius.circular(AppSizes.radius),
                 onTap: () => controller.selectDevice(device.id),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: device.id == controller.selectedDevice?.id
-                              ? 0.18
-                              : 0.08,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 360;
+                    final details = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          device.childName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
-                        child: Text(
-                          device.childName.isEmpty ? '?' : device.childName[0],
+                        Text(
+                          '${device.deviceName} - ${device.platform}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.muted),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              device.childName,
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(fontWeight: FontWeight.w700),
+                      ],
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: isCompact
+                            ? CrossAxisAlignment.start
+                            : CrossAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: device.id == controller.selectedDevice?.id
+                                  ? 0.18
+                                  : 0.08,
                             ),
-                            Text(
-                              '${device.deviceName} - ${device.platform}',
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppColors.muted),
+                            child: Text(
+                              device.childName.isEmpty
+                                  ? '?'
+                                  : device.childName[0],
                             ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: isCompact
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      details,
+                                      const SizedBox(height: 8),
+                                      OnlineStatusPill(
+                                        isOnline: device.isOnline,
+                                      ),
+                                    ],
+                                  )
+                                : details,
+                          ),
+                          if (!isCompact) ...[
+                            const SizedBox(width: 10),
+                            OnlineStatusPill(isOnline: device.isOnline),
                           ],
-                        ),
+                        ],
                       ),
-                      OnlineStatusPill(isOnline: device.isOnline),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
               if (device != controller.devices.last)
@@ -1654,6 +2030,1168 @@ class _SectionLoader extends StatelessWidget {
       child: Center(child: CircularProgressIndicator()),
     );
   }
+}
+
+void _runAfterDrawerClose(
+  BuildContext context,
+  void Function(BuildContext context) action,
+) {
+  final navigator = Navigator.of(context);
+  final rootContext = navigator.context;
+  navigator.pop();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (rootContext.mounted) {
+      action(rootContext);
+    }
+  });
+}
+
+void _openProfileScreen(BuildContext context, DashboardController controller) {
+  final user = appDependencies.authController.currentUser;
+  final summary = controller.summary;
+  final createdAt = user?.createdAt;
+
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.person_outline,
+    title: 'Profile',
+    subtitle: 'Parent account',
+    children: [
+      _ProfileHero(
+        name: user?.name ?? 'Parent account',
+        email: user?.email ?? AppStrings.demoEmail,
+        planName: summary?.currentPlanName ?? user?.planName ?? 'Free',
+      ),
+      const SizedBox(height: 16),
+      _InfoRow(
+        icon: Icons.devices_other,
+        title: 'Child devices',
+        value: '${summary?.totalDevices ?? controller.devices.length}',
+      ),
+      _InfoRow(
+        icon: Icons.wifi,
+        title: 'Online now',
+        value:
+            '${summary?.onlineDevices ?? controller.devices.where((device) => device.isOnline).length}',
+      ),
+      _InfoRow(
+        icon: Icons.notifications_active_outlined,
+        title: 'Unread alerts',
+        value: '${summary?.unreadAlerts ?? controller.notifications.length}',
+      ),
+      _InfoRow(
+        icon: Icons.calendar_today_outlined,
+        title: 'Member since',
+        value: createdAt == null
+            ? 'Not available'
+            : DateFormatter.compact(createdAt),
+      ),
+    ],
+  );
+}
+
+void _openPrivacyPolicyScreen(BuildContext context) {
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.privacy_tip_outlined,
+    title: 'Privacy Policy',
+    subtitle: 'Clear handling of family data',
+    children: const [
+      _PolicyParagraph(
+        title: 'What this app stores',
+        body:
+            'Offspring Tracker stores parent account details, paired child device names, app usage summaries, website rules, alerts, and subscription state needed to run parental controls.',
+      ),
+      _PolicyParagraph(
+        title: 'Why it is used',
+        body:
+            'Data is used to show reports, sync rules to child devices, notify parents about important events, and keep protection settings working across devices.',
+      ),
+      _PolicyParagraph(
+        title: 'Child data',
+        body:
+            'Child-related data should be treated as sensitive. The app should collect only what is needed for protection features and should make deletion and support requests easy for parents.',
+      ),
+      _PolicyParagraph(
+        title: 'Sharing',
+        body:
+            'This local demo does not send data to third-party services. A production version should disclose hosting, analytics, notifications, payment processors, and any SDKs used.',
+      ),
+    ],
+  );
+}
+
+void _openTermsScreen(BuildContext context) {
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.description_outlined,
+    title: 'Terms & Conditions',
+    subtitle: 'Responsible use of parental controls',
+    children: const [
+      _PolicyParagraph(
+        title: 'Parent responsibility',
+        body:
+            'Use this app only on devices you own or are legally allowed to manage. Parents are responsible for explaining monitoring and protection rules where required.',
+      ),
+      _PolicyParagraph(
+        title: 'Service behavior',
+        body:
+            'Reports, rules, alerts, and protection status depend on device permissions, network state, and child-device sync health.',
+      ),
+      _PolicyParagraph(
+        title: 'Limitations',
+        body:
+            'No parental-control tool can guarantee complete protection. The app is designed to support family safety decisions, not replace supervision.',
+      ),
+    ],
+  );
+}
+
+void _openDataPermissionsScreen(BuildContext context) {
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.security_outlined,
+    title: 'Data & permissions',
+    subtitle: 'Access used by protection features',
+    children: const [
+      _InfoRow(
+        icon: Icons.query_stats,
+        title: 'Usage access',
+        value: 'App usage reports and limits',
+      ),
+      _InfoRow(
+        icon: Icons.vpn_lock_outlined,
+        title: 'VPN/domain filter',
+        value: 'Website blocking rules',
+      ),
+      _InfoRow(
+        icon: Icons.sync,
+        title: 'Background service',
+        value: 'Rule sync and status updates',
+      ),
+      _InfoRow(
+        icon: Icons.notifications_outlined,
+        title: 'Notifications',
+        value: 'Alerts for limits and events',
+      ),
+      SizedBox(height: 10),
+      _PolicyParagraph(
+        title: 'Production checklist',
+        body:
+            'Before release, connect this screen to your final privacy policy URL, permission disclosures, account deletion flow, and data export process.',
+      ),
+    ],
+  );
+}
+
+void _openSupportScreen(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (context) => const _SupportTicketsScreen(),
+    ),
+  );
+}
+
+void _openAboutScreen(BuildContext context) {
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.info_outline,
+    title: 'About',
+    subtitle: AppStrings.appName,
+    children: const [
+      _InfoRow(
+        icon: Icons.verified_outlined,
+        title: 'Version',
+        value: '1.0.0+1',
+      ),
+      _InfoRow(
+        icon: Icons.family_restroom,
+        title: 'Purpose',
+        value: 'Parent dashboard for child device safety',
+      ),
+      _PolicyParagraph(
+        title: 'Built for',
+        body:
+            'Managing child devices, app limits, website rules, usage reports, alerts, and account trust controls from one parent experience.',
+      ),
+    ],
+  );
+}
+
+void _openDeleteAccountScreen(BuildContext context) {
+  _openDashboardInfoScreen(
+    context: context,
+    icon: Icons.delete_outline,
+    title: 'Delete account',
+    subtitle: 'Request removal of account data',
+    children: [
+      const _PolicyParagraph(
+        title: 'What will happen',
+        body:
+            'Account deletion is not connected to a backend in this demo. In production, this screen should submit a verified deletion request and explain what parent and child-device data will be removed.',
+      ),
+      const _PolicyParagraph(
+        title: 'Before deleting',
+        body:
+            'Parents should be able to export important records, review paired devices, and understand whether child-device rules will stop syncing.',
+      ),
+      const SizedBox(height: 8),
+      FilledButton.icon(
+        onPressed: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account deletion request noted for demo.'),
+            ),
+          );
+        },
+        icon: const Icon(Icons.delete_outline),
+        label: const Text('Request deletion'),
+      ),
+    ],
+  );
+}
+
+void _openDashboardInfoScreen({
+  required BuildContext context,
+  required IconData icon,
+  required String title,
+  required String subtitle,
+  required List<Widget> children,
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (context) {
+        return _DashboardInfoScreen(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          children: children,
+        );
+      },
+    ),
+  );
+}
+
+class _DashboardInfoScreen extends StatelessWidget {
+  const _DashboardInfoScreen({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSizes.pagePadding),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SettingsPageHeader(
+                    icon: icon,
+                    title: title,
+                    subtitle: subtitle,
+                  ),
+                  const SizedBox(height: AppSizes.sectionGap),
+                  ...children,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsPageHeader extends StatelessWidget {
+  const _SettingsPageHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppSizes.radius),
+          ),
+          child: Icon(icon, color: AppColors.primary),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _SupportTicketStatus { open, waitingParent, resolved }
+
+enum _SupportTicketPriority { low, normal, high, urgent }
+
+enum _SupportTicketCategory { pairing, appRules, webRules, billing, bug }
+
+enum _SupportTicketFilter { all, open, waitingParent, resolved }
+
+class _SupportTicket {
+  const _SupportTicket({
+    required this.id,
+    required this.subject,
+    required this.description,
+    required this.category,
+    required this.priority,
+    required this.status,
+    required this.requesterEmail,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String subject;
+  final String description;
+  final _SupportTicketCategory category;
+  final _SupportTicketPriority priority;
+  final _SupportTicketStatus status;
+  final String requesterEmail;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  _SupportTicket copyWith({_SupportTicketStatus? status, DateTime? updatedAt}) {
+    return _SupportTicket(
+      id: id,
+      subject: subject,
+      description: description,
+      category: category,
+      priority: priority,
+      status: status ?? this.status,
+      requesterEmail: requesterEmail,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
+extension _SupportTicketStatusUi on _SupportTicketStatus {
+  String get label {
+    switch (this) {
+      case _SupportTicketStatus.open:
+        return 'Open';
+      case _SupportTicketStatus.waitingParent:
+        return 'Waiting parent';
+      case _SupportTicketStatus.resolved:
+        return 'Resolved';
+    }
+  }
+
+  String get actionLabel {
+    switch (this) {
+      case _SupportTicketStatus.open:
+        return 'Mark open';
+      case _SupportTicketStatus.waitingParent:
+        return 'Mark waiting parent';
+      case _SupportTicketStatus.resolved:
+        return 'Mark resolved';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case _SupportTicketStatus.open:
+        return Icons.mark_email_unread_outlined;
+      case _SupportTicketStatus.waitingParent:
+        return Icons.pending_actions_outlined;
+      case _SupportTicketStatus.resolved:
+        return Icons.check_circle_outline;
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case _SupportTicketStatus.open:
+        return AppColors.accent;
+      case _SupportTicketStatus.waitingParent:
+        return AppColors.secondary;
+      case _SupportTicketStatus.resolved:
+        return AppColors.muted;
+    }
+  }
+}
+
+extension _SupportTicketPriorityUi on _SupportTicketPriority {
+  String get label {
+    switch (this) {
+      case _SupportTicketPriority.low:
+        return 'Low';
+      case _SupportTicketPriority.normal:
+        return 'Normal';
+      case _SupportTicketPriority.high:
+        return 'High';
+      case _SupportTicketPriority.urgent:
+        return 'Urgent';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case _SupportTicketPriority.low:
+        return AppColors.muted;
+      case _SupportTicketPriority.normal:
+        return AppColors.primary;
+      case _SupportTicketPriority.high:
+        return AppColors.accent;
+      case _SupportTicketPriority.urgent:
+        return AppColors.danger;
+    }
+  }
+}
+
+extension _SupportTicketCategoryUi on _SupportTicketCategory {
+  String get label {
+    switch (this) {
+      case _SupportTicketCategory.pairing:
+        return 'Device pairing';
+      case _SupportTicketCategory.appRules:
+        return 'App rules';
+      case _SupportTicketCategory.webRules:
+        return 'Website rules';
+      case _SupportTicketCategory.billing:
+        return 'Billing';
+      case _SupportTicketCategory.bug:
+        return 'Bug report';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case _SupportTicketCategory.pairing:
+        return Icons.qr_code_scanner;
+      case _SupportTicketCategory.appRules:
+        return Icons.apps_outlined;
+      case _SupportTicketCategory.webRules:
+        return Icons.public_off_outlined;
+      case _SupportTicketCategory.billing:
+        return Icons.receipt_long_outlined;
+      case _SupportTicketCategory.bug:
+        return Icons.bug_report_outlined;
+    }
+  }
+}
+
+extension _SupportTicketFilterUi on _SupportTicketFilter {
+  String get label {
+    switch (this) {
+      case _SupportTicketFilter.all:
+        return 'All';
+      case _SupportTicketFilter.open:
+        return 'Open';
+      case _SupportTicketFilter.waitingParent:
+        return 'Waiting';
+      case _SupportTicketFilter.resolved:
+        return 'Resolved';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case _SupportTicketFilter.all:
+        return Icons.inbox_outlined;
+      case _SupportTicketFilter.open:
+        return Icons.mark_email_unread_outlined;
+      case _SupportTicketFilter.waitingParent:
+        return Icons.pending_actions_outlined;
+      case _SupportTicketFilter.resolved:
+        return Icons.check_circle_outline;
+    }
+  }
+}
+
+class _SupportTicketsScreen extends StatefulWidget {
+  const _SupportTicketsScreen();
+
+  @override
+  State<_SupportTicketsScreen> createState() => _SupportTicketsScreenState();
+}
+
+class _SupportTicketsScreenState extends State<_SupportTicketsScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _subjectController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  _SupportTicketCategory _category = _SupportTicketCategory.pairing;
+  _SupportTicketPriority _priority = _SupportTicketPriority.normal;
+  _SupportTicketFilter _filter = _SupportTicketFilter.all;
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  List<_SupportTicket> get _filteredTickets {
+    return _demoSupportTickets.where((ticket) {
+      switch (_filter) {
+        case _SupportTicketFilter.all:
+          return true;
+        case _SupportTicketFilter.open:
+          return ticket.status == _SupportTicketStatus.open;
+        case _SupportTicketFilter.waitingParent:
+          return ticket.status == _SupportTicketStatus.waitingParent;
+        case _SupportTicketFilter.resolved:
+          return ticket.status == _SupportTicketStatus.resolved;
+      }
+    }).toList();
+  }
+
+  void _submitTicket() {
+    FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final user = appDependencies.authController.currentUser;
+    final now = DateTime.now();
+    final ticket = _SupportTicket(
+      id: 'SUP-${1001 + _demoSupportTickets.length}',
+      subject: _subjectController.text.trim(),
+      description: _descriptionController.text.trim(),
+      category: _category,
+      priority: _priority,
+      status: _SupportTicketStatus.open,
+      requesterEmail: user?.email ?? AppStrings.demoEmail,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    setState(() {
+      _demoSupportTickets.insert(0, ticket);
+      _filter = _SupportTicketFilter.all;
+      _subjectController.clear();
+      _descriptionController.clear();
+      _category = _SupportTicketCategory.pairing;
+      _priority = _SupportTicketPriority.normal;
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${ticket.id} created.')));
+  }
+
+  void _updateTicketStatus(_SupportTicket ticket, _SupportTicketStatus status) {
+    final index = _demoSupportTickets.indexWhere(
+      (item) => item.id == ticket.id,
+    );
+    if (index == -1) {
+      return;
+    }
+
+    setState(() {
+      _demoSupportTickets[index] = ticket.copyWith(
+        status: status,
+        updatedAt: DateTime.now(),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final openTickets = _demoSupportTickets
+        .where((ticket) => ticket.status == _SupportTicketStatus.open)
+        .length;
+    final waitingTickets = _demoSupportTickets
+        .where((ticket) => ticket.status == _SupportTicketStatus.waitingParent)
+        .length;
+    final resolvedTickets = _demoSupportTickets
+        .where((ticket) => ticket.status == _SupportTicketStatus.resolved)
+        .length;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Support tickets')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSizes.pagePadding),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SettingsPageHeader(
+                    icon: Icons.support_agent_outlined,
+                    title: 'Support tickets',
+                    subtitle:
+                        'Create requests, track progress, and manage parent support issues.',
+                  ),
+                  const SizedBox(height: AppSizes.sectionGap),
+                  _MetricGrid(
+                    children: [
+                      MetricCard(
+                        label: 'All tickets',
+                        value: '${_demoSupportTickets.length}',
+                        icon: Icons.confirmation_number_outlined,
+                        color: AppColors.primary,
+                      ),
+                      MetricCard(
+                        label: 'Open',
+                        value: '$openTickets',
+                        icon: Icons.mark_email_unread_outlined,
+                        color: AppColors.accent,
+                      ),
+                      MetricCard(
+                        label: 'Waiting parent',
+                        value: '$waitingTickets',
+                        icon: Icons.pending_actions_outlined,
+                        color: AppColors.secondary,
+                      ),
+                      MetricCard(
+                        label: 'Resolved',
+                        value: '$resolvedTickets',
+                        icon: Icons.check_circle_outline,
+                        color: AppColors.muted,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.sectionGap),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isWide = constraints.maxWidth >= 920;
+                      final form = _SupportTicketForm(
+                        formKey: _formKey,
+                        subjectController: _subjectController,
+                        descriptionController: _descriptionController,
+                        category: _category,
+                        priority: _priority,
+                        onCategoryChanged: (value) {
+                          if (value != null) {
+                            setState(() => _category = value);
+                          }
+                        },
+                        onPriorityChanged: (value) {
+                          if (value != null) {
+                            setState(() => _priority = value);
+                          }
+                        },
+                        onSubmit: _submitTicket,
+                      );
+                      final tickets = _SupportTicketList(
+                        filter: _filter,
+                        tickets: _filteredTickets,
+                        onFilterChanged: (filter) {
+                          setState(() => _filter = filter);
+                        },
+                        onStatusChanged: _updateTicketStatus,
+                      );
+
+                      if (!isWide) {
+                        return Column(
+                          children: [
+                            form,
+                            const SizedBox(height: AppSizes.sectionGap),
+                            tickets,
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(width: 360, child: form),
+                          const SizedBox(width: AppSizes.sectionGap),
+                          Expanded(child: tickets),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SupportTicketForm extends StatelessWidget {
+  const _SupportTicketForm({
+    required this.formKey,
+    required this.subjectController,
+    required this.descriptionController,
+    required this.category,
+    required this.priority,
+    required this.onCategoryChanged,
+    required this.onPriorityChanged,
+    required this.onSubmit,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController subjectController;
+  final TextEditingController descriptionController;
+  final _SupportTicketCategory category;
+  final _SupportTicketPriority priority;
+  final ValueChanged<_SupportTicketCategory?> onCategoryChanged;
+  final ValueChanged<_SupportTicketPriority?> onPriorityChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Create ticket',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: subjectController,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Subject',
+                  prefixIcon: Icon(Icons.subject),
+                ),
+                validator: (value) => Validators.requiredText(value, 'Subject'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<_SupportTicketCategory>(
+                initialValue: category,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: [
+                  for (final item in _SupportTicketCategory.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
+                ],
+                onChanged: onCategoryChanged,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<_SupportTicketPriority>(
+                initialValue: priority,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Priority',
+                  prefixIcon: Icon(Icons.flag_outlined),
+                ),
+                items: [
+                  for (final item in _SupportTicketPriority.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
+                ],
+                onChanged: onPriorityChanged,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: descriptionController,
+                minLines: 4,
+                maxLines: 7,
+                textInputAction: TextInputAction.newline,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  alignLabelWithHint: true,
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
+                validator: (value) =>
+                    Validators.requiredText(value, 'Description'),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onSubmit,
+                icon: const Icon(Icons.add),
+                label: const Text('Create ticket'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SupportTicketList extends StatelessWidget {
+  const _SupportTicketList({
+    required this.filter,
+    required this.tickets,
+    required this.onFilterChanged,
+    required this.onStatusChanged,
+  });
+
+  final _SupportTicketFilter filter;
+  final List<_SupportTicket> tickets;
+  final ValueChanged<_SupportTicketFilter> onFilterChanged;
+  final void Function(_SupportTicket ticket, _SupportTicketStatus status)
+  onStatusChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Tickets',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Text(
+              '${tickets.length} shown',
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(color: AppColors.muted),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SegmentedButton<_SupportTicketFilter>(
+            segments: [
+              for (final item in _SupportTicketFilter.values)
+                ButtonSegment(
+                  value: item,
+                  icon: Icon(item.icon),
+                  label: Text(item.label),
+                ),
+            ],
+            selected: {filter},
+            onSelectionChanged: (values) {
+              onFilterChanged(values.first);
+            },
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (tickets.isEmpty)
+          const EmptyStateWidget(
+            icon: Icons.confirmation_number_outlined,
+            title: 'No tickets found',
+            message: 'Create a ticket or switch filters to see requests.',
+          )
+        else
+          for (final ticket in tickets) ...[
+            _SupportTicketCard(
+              ticket: ticket,
+              onStatusChanged: (status) => onStatusChanged(ticket, status),
+            ),
+            const SizedBox(height: AppSizes.cardGap),
+          ],
+      ],
+    );
+  }
+}
+
+class _SupportTicketCard extends StatelessWidget {
+  const _SupportTicketCard({
+    required this.ticket,
+    required this.onStatusChanged,
+  });
+
+  final _SupportTicket ticket;
+  final ValueChanged<_SupportTicketStatus> onStatusChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ticket.subject,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${ticket.id} - Updated ${DateFormatter.relative(ticket.updatedAt)}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<_SupportTicketStatus>(
+                  tooltip: 'Change status',
+                  onSelected: onStatusChanged,
+                  itemBuilder: (context) => [
+                    for (final status in _SupportTicketStatus.values)
+                      PopupMenuItem(
+                        value: status,
+                        child: Text(status.actionLabel),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StatusPill(
+                  label: ticket.status.label,
+                  icon: ticket.status.icon,
+                  color: ticket.status.color,
+                ),
+                StatusPill(
+                  label: ticket.priority.label,
+                  icon: Icons.flag_outlined,
+                  color: ticket.priority.color,
+                ),
+                StatusPill(
+                  label: ticket.category.label,
+                  icon: ticket.category.icon,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              ticket.description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.muted,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _InfoRow(
+              icon: Icons.mail_outline,
+              title: 'Requester',
+              value: ticket.requesterEmail,
+            ),
+            _InfoRow(
+              icon: Icons.calendar_today_outlined,
+              title: 'Created',
+              value: DateFormatter.compact(ticket.createdAt),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.name,
+    required this.email,
+    required this.planName,
+  });
+
+  final String name;
+  final String email;
+  final String planName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.primary,
+            child: Text(
+              _initialsFor(name),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          StatusPill(
+            label: planName,
+            icon: Icons.workspace_premium_outlined,
+            color: AppColors.accent,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PolicyParagraph extends StatelessWidget {
+  const _PolicyParagraph({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.muted,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _initialsFor(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) {
+    return 'P';
+  }
+  if (parts.length == 1) {
+    return parts.first.characters.first.toUpperCase();
+  }
+  return '${parts.first.characters.first}${parts.last.characters.first}'
+      .toUpperCase();
 }
 
 Future<void> _showPairDeviceDialog(
