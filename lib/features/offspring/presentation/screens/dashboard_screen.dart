@@ -147,44 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           bottomNavigationBar: isWide
               ? null
-              : NavigationBar(
-                  selectedIndex: _controller.section.index,
-                  onDestinationSelected: (index) {
-                    _controller.showSection(DashboardSection.values[index]);
-                  },
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard),
-                      label: 'Home',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.apps_outlined),
-                      selectedIcon: Icon(Icons.apps),
-                      label: 'Apps',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.public_off_outlined),
-                      selectedIcon: Icon(Icons.public_off),
-                      label: 'Sites',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.bar_chart_outlined),
-                      selectedIcon: Icon(Icons.bar_chart),
-                      label: 'Reports',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.notifications_outlined),
-                      selectedIcon: Icon(Icons.notifications),
-                      label: 'Alerts',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.admin_panel_settings_outlined),
-                      selectedIcon: Icon(Icons.admin_panel_settings),
-                      label: 'Admin',
-                    ),
-                  ],
-                ),
+              : _AnimatedDashboardBottomNav(controller: _controller),
         );
       },
     );
