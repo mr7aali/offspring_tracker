@@ -13,7 +13,7 @@ class OffspringTrackerApp extends StatelessWidget {
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: RouteNames.auth,
+      initialRoute: RouteNames.splash,
       routes: AppRoutes.routes,
     );
   }

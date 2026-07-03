@@ -7,6 +7,10 @@ void main() {
 
   testWidgets('shows parent auth entry point', (WidgetTester tester) async {
     await tester.pumpWidget(const OffspringTrackerApp());
+    expect(find.text('Family safety, calmly connected'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
 
     expect(find.text('Offspring Tracker'), findsOneWidget);
     expect(find.text('Welcome back'), findsOneWidget);
@@ -15,6 +19,8 @@ void main() {
 
   testWidgets('demo parent can open dashboard', (WidgetTester tester) async {
     await tester.pumpWidget(const OffspringTrackerApp());
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
 
     final demoButton = find.text('Use demo parent');
     await tester.ensureVisible(demoButton);

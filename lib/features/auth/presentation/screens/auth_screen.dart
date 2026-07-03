@@ -6,6 +6,7 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../shared/widgets/app_logo.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -138,18 +139,11 @@ class _BrandPanel extends StatelessWidget {
           ? CrossAxisAlignment.center
           : CrossAxisAlignment.start,
       children: [
-        Container(
-          width: compact ? 58 : 72,
-          height: compact ? 58 : 72,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppSizes.radius),
-          ),
-          child: Icon(
-            Icons.family_restroom,
-            size: compact ? 32 : 40,
-            color: AppColors.primary,
-          ),
+        AppLogoMark(
+          size: compact ? 64 : 82,
+          padding: 0,
+          backgroundColor: Colors.white,
+          borderRadius: AppSizes.radius,
         ),
         SizedBox(height: compact ? 14 : 24),
         Text(

@@ -10,6 +10,7 @@ import '../../../../core/routes/route_names.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
+import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/metric_card.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../../shared/widgets/status_pill.dart';
@@ -78,18 +79,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSizes.radius),
-                  ),
-                  child: const Icon(
-                    Icons.family_restroom,
-                    color: AppColors.primary,
-                    size: 21,
-                  ),
+                const AppLogoMark(
+                  size: 38,
+                  padding: 0,
+                  backgroundColor: Colors.white,
+                  borderRadius: AppSizes.radius,
                 ),
                 const SizedBox(width: 10),
                 Flexible(
