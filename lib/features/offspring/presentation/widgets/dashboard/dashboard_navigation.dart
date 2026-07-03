@@ -5,43 +5,43 @@ const List<_DashboardDestination> _dashboardDestinations = [
     section: DashboardSection.overview,
     label: 'Home',
     railLabel: 'Overview',
-    icon: Icons.dashboard_outlined,
-    selectedIcon: Icons.dashboard,
+    icon: Icons.space_dashboard_outlined,
+    selectedIcon: Icons.dashboard_customize_rounded,
   ),
   _DashboardDestination(
     section: DashboardSection.apps,
     label: 'Apps',
     railLabel: 'Apps',
-    icon: Icons.apps_outlined,
-    selectedIcon: Icons.apps,
+    icon: Icons.widgets_outlined,
+    selectedIcon: Icons.widgets_rounded,
   ),
   _DashboardDestination(
     section: DashboardSection.websites,
     label: 'Sites',
     railLabel: 'Websites',
-    icon: Icons.public_off_outlined,
-    selectedIcon: Icons.public_off,
+    icon: Icons.language_outlined,
+    selectedIcon: Icons.travel_explore_rounded,
   ),
   _DashboardDestination(
     section: DashboardSection.reports,
     label: 'Reports',
     railLabel: 'Reports',
-    icon: Icons.bar_chart_outlined,
-    selectedIcon: Icons.bar_chart,
+    icon: Icons.insights_outlined,
+    selectedIcon: Icons.bar_chart_rounded,
   ),
   _DashboardDestination(
     section: DashboardSection.alerts,
     label: 'Alerts',
     railLabel: 'Alerts',
-    icon: Icons.notifications_outlined,
-    selectedIcon: Icons.notifications,
+    icon: Icons.notifications_none_rounded,
+    selectedIcon: Icons.notifications_active_rounded,
   ),
   _DashboardDestination(
     section: DashboardSection.admin,
     label: 'Admin',
     railLabel: 'Admin & plans',
-    icon: Icons.admin_panel_settings_outlined,
-    selectedIcon: Icons.admin_panel_settings,
+    icon: Icons.verified_user_outlined,
+    selectedIcon: Icons.workspace_premium_rounded,
   ),
 ];
 
@@ -166,7 +166,15 @@ class _AnimatedDashboardBottomNav extends StatelessWidget {
                                   width: indicatorWidth,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary,
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFF3B82F6),
+                                          AppColors.primary,
+                                          Color(0xFF1D4ED8),
+                                        ],
+                                      ),
                                       borderRadius: BorderRadius.circular(22),
                                       boxShadow: [
                                         BoxShadow(
@@ -260,10 +268,8 @@ class _AnimatedDashboardBottomNavItem extends StatelessWidget {
               child: selected
                   ? Center(
                       key: const ValueKey('selected'),
-                      child: Icon(
-                        destination.selectedIcon,
-                        size: 27,
-                        color: Colors.white,
+                      child: _PremiumActiveNavIcon(
+                        icon: destination.selectedIcon,
                       ),
                     )
                   : Column(
@@ -292,6 +298,54 @@ class _AnimatedDashboardBottomNavItem extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PremiumActiveNavIcon extends StatelessWidget {
+  const _PremiumActiveNavIcon({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 42,
+      height: 42,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+            ),
+          ),
+          Icon(icon, size: 25, color: Colors.white),
+          Positioned(
+            right: 3,
+            top: 2,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accent,
+                border: Border.all(color: Colors.white, width: 1.4),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                size: 8,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
