@@ -43,6 +43,18 @@ class _DashboardDrawer extends StatelessWidget {
                     },
                   ),
                   ListTile(
+                    leading: const Icon(Icons.devices_other_outlined),
+                    title: const Text('Child devices'),
+                    subtitle: const Text('Select, pair, and review devices'),
+                    onTap: () {
+                      _runAfterDrawerClose(
+                        context,
+                        (context) =>
+                            _openChildDevicesScreen(context, controller),
+                      );
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.privacy_tip_outlined),
                     title: const Text('Privacy Policy'),
                     subtitle: const Text(

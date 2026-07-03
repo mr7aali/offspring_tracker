@@ -26,6 +26,7 @@ part '../widgets/dashboard/dashboard_device_widgets.dart';
 part '../widgets/dashboard/dashboard_rule_cards.dart';
 part '../widgets/dashboard/dashboard_admin_widgets.dart';
 part 'dashboard_settings_screens.dart';
+part 'child_devices_screen.dart';
 part '../widgets/dashboard/settings_info_widgets.dart';
 part 'support_tickets_screen.dart';
 part '../widgets/support/support_ticket_form.dart';
@@ -109,6 +110,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
+              if (_controller.devices.isNotEmpty)
+                _GlobalDeviceButton(controller: _controller, compact: !isWide),
               Builder(
                 builder: (context) {
                   return IconButton(

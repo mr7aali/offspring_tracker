@@ -1,181 +1,253 @@
 part of '../../screens/dashboard_screen.dart';
 
-class _DeviceSelector extends StatelessWidget {
-  const _DeviceSelector({required this.controller});
+class _GlobalDeviceButton extends StatelessWidget {
+  const _GlobalDeviceButton({required this.controller, required this.compact});
+
+  final DashboardController controller;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final device = controller.selectedDevice;
+    if (compact) {
+      return IconButton(
+        tooltip: device == null
+            ? 'Manage child devices'
+            : 'Active device: ${device.childName}',
+        onPressed: () => _openChildDevicesScreen(context, controller),
+        icon: Badge(
+          isLabelVisible: device?.isOnline ?? false,
+          smallSize: 8,
+          backgroundColor: AppColors.secondary,
+          child: const Icon(Icons.smartphone),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        avatar: Icon(
+          device?.isOnline ?? false ? Icons.wifi : Icons.wifi_off,
+          size: 18,
+          color: device?.isOnline ?? false
+              ? AppColors.secondary
+              : AppColors.muted,
+        ),
+        label: Text(
+          device == null
+              ? 'Child devices'
+              : '${device.childName} - ${device.deviceName}',
+          overflow: TextOverflow.ellipsis,
+        ),
+        tooltip: 'Manage child devices',
+        onPressed: () => _openChildDevicesScreen(context, controller),
+      ),
+    );
+  }
+}
+
+class _ActiveDeviceBanner extends StatelessWidget {
+  const _ActiveDeviceBanner({
+    required this.controller,
+    this.message = 'This section follows the active child device.',
+  });
+
+  final DashboardController controller;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final device = controller.selectedDevice;
+    if (device == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSizes.radius),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 560;
+          final title = Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.14),
+                child: Text(
+                  device.childName.isEmpty ? '?' : device.childName[0],
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${device.childName} - ${device.deviceName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      message,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+          final action = TextButton.icon(
+            onPressed: () => _openChildDevicesScreen(context, controller),
+            icon: const Icon(Icons.swap_horiz),
+            label: const Text('Change'),
+          );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [title, const SizedBox(height: 8), action],
+            );
+          }
+
+          return Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: 12),
+              action,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DevicePickerCard extends StatelessWidget {
+  const _DevicePickerCard({required this.controller});
 
   final DashboardController controller;
 
   @override
   Widget build(BuildContext context) {
-    if (controller.devices.isEmpty) {
-      return EmptyStateWidget(
-        icon: Icons.devices_other,
-        title: 'No devices paired',
-        message: 'Pair a child Android device to start monitoring apps.',
-        action: FilledButton.icon(
-          onPressed: () => _showPairDeviceDialog(context, controller),
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Pair device'),
-        ),
-      );
-    }
-
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 720;
-            final menu = _DeviceMenu(controller: controller, expanded: true);
-            final details = Wrap(
-              spacing: 10,
-              runSpacing: 8,
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                OnlineStatusPill(
-                  isOnline: controller.selectedDevice?.isOnline ?? false,
+                Expanded(
+                  child: Text(
+                    'Active child device',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-                StatusPill(
-                  label:
-                      '${controller.selectedDevice?.enabledProtectionCount ?? 0}/4 protections',
-                  icon: Icons.verified_user_outlined,
-                  color: AppColors.primary,
-                ),
-                StatusPill(
-                  label:
-                      'Code ${controller.selectedDevice?.pairingCode ?? '-'}',
-                  icon: Icons.qr_code_2,
-                  color: AppColors.accent,
+                FilledButton.icon(
+                  onPressed: () => _showPairDeviceDialog(context, controller),
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('Pair'),
                 ),
               ],
-            );
-            if (!isWide) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [menu, const SizedBox(height: 12), details],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(child: menu),
-                const SizedBox(width: 16),
-                Expanded(child: details),
-              ],
-            );
-          },
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Choose once here. Apps, websites, reports, and protection status will use this device.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+            ),
+            const SizedBox(height: 16),
+            for (final device in controller.devices) ...[
+              _DevicePickerTile(
+                device: device,
+                selected: device.id == controller.selectedDevice?.id,
+                onTap: () => controller.selectDevice(device.id),
+              ),
+              if (device != controller.devices.last)
+                const Divider(height: 12, color: AppColors.border),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _DeviceMenu extends StatelessWidget {
-  const _DeviceMenu({required this.controller, this.expanded = false});
-
-  final DashboardController controller;
-  final bool expanded;
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedId = controller.selectedDevice?.id;
-    final selectedDeviceExists = controller.devices.any(
-      (device) => device.id == selectedId,
-    );
-    final effectiveSelectedId = selectedDeviceExists ? selectedId : null;
-    final canSelect = !controller.isLoading && controller.devices.isNotEmpty;
-
-    final menu = LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 360;
-        return DropdownButtonFormField<String>(
-          key: ValueKey(effectiveSelectedId),
-          initialValue: effectiveSelectedId,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: 'Child device',
-            hintText: canSelect ? 'Select a device' : 'No devices paired',
-            prefixIcon: const Icon(Icons.smartphone),
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: compact ? 10 : 12,
-              vertical: compact ? 12 : 16,
-            ),
-          ),
-          items: [
-            for (final device in controller.devices)
-              DropdownMenuItem(
-                value: device.id,
-                child: _DeviceMenuItem(device: device),
-              ),
-          ],
-          selectedItemBuilder: (context) => [
-            for (final device in controller.devices)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  compact
-                      ? device.childName
-                      : '${device.childName} - ${device.deviceName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          onChanged: canSelect
-              ? (value) {
-                  if (value != null) {
-                    controller.selectDevice(value);
-                  }
-                }
-              : null,
-        );
-      },
-    );
-
-    if (expanded) {
-      return menu;
-    }
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
-      child: menu,
-    );
-  }
-}
-
-class _DeviceMenuItem extends StatelessWidget {
-  const _DeviceMenuItem({required this.device});
+class _DevicePickerTile extends StatelessWidget {
+  const _DevicePickerTile({
+    required this.device,
+    required this.selected,
+    required this.onTap,
+  });
 
   final ChildDevice device;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        OnlineStatusPill(isOnline: device.isOnline),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                device.childName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSizes.radius),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selected ? AppColors.primary : AppColors.muted,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    device.childName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    '${device.deviceName} - ${device.platform}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                  ),
+                ],
               ),
-              Text(
-                device.deviceName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            OnlineStatusPill(isOnline: device.isOnline),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

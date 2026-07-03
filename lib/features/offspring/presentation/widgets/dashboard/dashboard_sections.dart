@@ -60,35 +60,51 @@ class _OverviewSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSizes.sectionGap),
-        _DeviceSelector(controller: controller),
-        const SizedBox(height: AppSizes.sectionGap),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 840;
-            final device = controller.selectedDevice;
-            final children = [
-              _ProtectionStatusCard(device: device),
-              _DeviceListCard(controller: controller),
-            ];
-            if (!isWide) {
-              return Column(
+        if (controller.devices.isEmpty)
+          EmptyStateWidget(
+            icon: Icons.devices_other,
+            title: 'No devices paired',
+            message: 'Pair a child Android device to start monitoring apps.',
+            action: FilledButton.icon(
+              onPressed: () => _showPairDeviceDialog(context, controller),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Pair device'),
+            ),
+          )
+        else ...[
+          _ActiveDeviceBanner(
+            controller: controller,
+            message: 'Overview, rules, and reports use this active device.',
+          ),
+          const SizedBox(height: AppSizes.sectionGap),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 840;
+              final device = controller.selectedDevice;
+              final children = [
+                _ProtectionStatusCard(device: device),
+                _DeviceListCard(controller: controller),
+              ];
+              if (!isWide) {
+                return Column(
+                  children: [
+                    children[0],
+                    const SizedBox(height: AppSizes.cardGap),
+                    children[1],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  children[0],
-                  const SizedBox(height: AppSizes.cardGap),
-                  children[1],
+                  Expanded(child: children[0]),
+                  const SizedBox(width: AppSizes.cardGap),
+                  Expanded(child: children[1]),
                 ],
               );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: children[0]),
-                const SizedBox(width: AppSizes.cardGap),
-                Expanded(child: children[1]),
-              ],
-            );
-          },
-        ),
+            },
+          ),
+        ],
       ],
     );
   }
@@ -110,7 +126,6 @@ class _AppsSection extends StatelessWidget {
           title: 'Installed app monitoring',
           subtitle:
               'Review package names, usage, limits, and block status per device.',
-          action: _DeviceMenu(controller: controller),
         ),
         const SizedBox(height: AppSizes.sectionGap),
         if (device == null)
@@ -130,7 +145,12 @@ class _AppsSection extends StatelessWidget {
             title: 'No apps detected',
             message: 'Installed apps will appear after the child device syncs.',
           )
-        else
+        else ...[
+          _ActiveDeviceBanner(
+            controller: controller,
+            message: 'App rules are shown for the active child device.',
+          ),
+          const SizedBox(height: AppSizes.cardGap),
           Column(
             children: [
               for (final app in controller.apps) ...[
@@ -144,6 +164,7 @@ class _AppsSection extends StatelessWidget {
               ],
             ],
           ),
+        ],
       ],
     );
   }
@@ -173,8 +194,6 @@ class _WebsitesSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSizes.sectionGap),
-        _DeviceSelector(controller: controller),
-        const SizedBox(height: AppSizes.sectionGap),
         if (controller.selectedDevice == null)
           const EmptyStateWidget(
             icon: Icons.public_off,
@@ -192,7 +211,12 @@ class _WebsitesSection extends StatelessWidget {
               label: const Text('Add domain'),
             ),
           )
-        else
+        else ...[
+          _ActiveDeviceBanner(
+            controller: controller,
+            message: 'Website rules apply to the active child device.',
+          ),
+          const SizedBox(height: AppSizes.cardGap),
           Column(
             children: [
               for (final rule in controller.websiteRules) ...[
@@ -206,6 +230,7 @@ class _WebsitesSection extends StatelessWidget {
               ],
             ],
           ),
+        ],
       ],
     );
   }
@@ -244,7 +269,6 @@ class _ReportsSection extends StatelessWidget {
           title: 'Usage reports',
           subtitle:
               'Daily and weekly app usage, most-used apps, and blocked attempts.',
-          action: _DeviceMenu(controller: controller),
         ),
         const SizedBox(height: AppSizes.sectionGap),
         if (controller.selectedDevice == null)
@@ -254,6 +278,11 @@ class _ReportsSection extends StatelessWidget {
             message: 'Usage history appears after a child device is paired.',
           )
         else ...[
+          _ActiveDeviceBanner(
+            controller: controller,
+            message: 'Reports are filtered by the active child device.',
+          ),
+          const SizedBox(height: AppSizes.cardGap),
           _MetricGrid(
             children: [
               MetricCard(
