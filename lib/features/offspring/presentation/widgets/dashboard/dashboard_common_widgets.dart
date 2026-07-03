@@ -9,17 +9,17 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1000
+        final columns = constraints.maxWidth >= 960
             ? 4
-            : constraints.maxWidth >= 620
+            : constraints.maxWidth >= 320
             ? 2
             : 1;
+        const spacing = 10.0;
         final width =
-            (constraints.maxWidth - ((columns - 1) * AppSizes.cardGap)) /
-            columns;
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
         return Wrap(
-          spacing: AppSizes.cardGap,
-          runSpacing: AppSizes.cardGap,
+          spacing: spacing,
+          runSpacing: spacing,
           children: [
             for (final child in children) SizedBox(width: width, child: child),
           ],

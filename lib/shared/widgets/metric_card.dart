@@ -23,52 +23,61 @@ class MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSizes.radius),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const Spacer(),
-                if (caption != null)
-                  Flexible(
-                    child: Text(
-                      caption!,
-                      textAlign: TextAlign.end,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelMedium?.copyWith(color: AppColors.muted),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppSizes.radius),
+              ),
+              child: Icon(icon, color: color, size: 19),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.ink,
+                      height: 1.05,
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink,
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+                  if (caption != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      caption!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
             ),
           ],
         ),
