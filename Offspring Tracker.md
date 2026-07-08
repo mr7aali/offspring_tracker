@@ -14,6 +14,25 @@ Features:
 - View child device status
 - Update parental control rules remotely
 
+## 1.1 Parent and Child Login
+
+The app supports two separate login experiences.
+
+Parent login:
+
+- Parent signs in with email and password
+- Parent can register a new parent account
+- Parent can pair child devices
+- Parent manages app rules, website rules, reports, alerts, subscriptions, and support
+
+Child login:
+
+- Child signs in with child/device name and pairing code
+- Child access is created from a parent-paired device
+- Child can view their own device status
+- Child can view app limits, blocked apps, website rules, and recent alerts
+- Child cannot manage or change parent rules
+
 ## 2. Child Device Pairing
 
 Parents can connect a child’s Android device with their account.
@@ -204,7 +223,10 @@ Features:
 Offspring Tracker will include:
 
 - Parent login/register
+- Child login
 - Child device pairing
+- Parent dashboard
+- Child dashboard
 - Installed app monitoring
 - App usage tracking
 - Daily app time limit
