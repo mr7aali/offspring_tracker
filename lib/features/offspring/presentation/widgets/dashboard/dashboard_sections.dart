@@ -1,154 +1,218 @@
 part of '../../screens/dashboard_screen.dart';
 
+class _StickyPairDeviceDelegate extends SliverPersistentHeaderDelegate {
+  _StickyPairDeviceDelegate({required this.controller, required this.padding});
+  
+  final DashboardController controller;
+  final EdgeInsets padding;
+  
+  @override
+  double get minExtent => 88.0; 
+  @override
+  double get maxExtent => 88.0;
+  
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      color: Colors.transparent, // Transparent to act like a floating button
+      padding: EdgeInsets.symmetric(horizontal: padding.left),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+            child: Material(
+              elevation: overlapsContent ? 12 : 4,
+              shadowColor: colors.primary.withValues(alpha: overlapsContent ? 0.5 : 0.35),
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      colors.primary,
+                      Color.lerp(colors.primary, colors.secondary, 0.45)!,
+                    ],
+                  ),
+                ),
+                child: TextButton.icon(
+                  onPressed: () => _showPairDeviceDialog(context, controller),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.onPrimary,
+                    minimumSize: const Size.fromHeight(56),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_link_rounded, size: 24),
+                  label: const Text('Pair device'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyPairDeviceDelegate oldDelegate) => true;
+}
+
 class _OverviewSection extends StatelessWidget {
-  const _OverviewSection({required this.controller});
+  const _OverviewSection({super.key, required this.controller, required this.padding});
 
   final DashboardController controller;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     final summary = controller.summary;
-    final colors = Theme.of(context).colorScheme;
     if (summary == null && controller.isLoading) {
-      return const _SectionLoader();
+      return const Center(child: _SectionLoader());
     }
 
-    return Column(
-      key: const ValueKey('overview'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(
-          title: 'Parent dashboard',
-          subtitle:
-              'Manage child devices, remote rules, protection status, and reports.',
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: Material(
-            elevation: 5,
-            shadowColor: colors.primary.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(14),
-            clipBehavior: Clip.antiAlias,
-            child: Ink(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    colors.primary,
-                    Color.lerp(colors.primary, colors.secondary, 0.45)!,
-                  ],
-                ),
-              ),
-              child: TextButton.icon(
-                onPressed: () => _showPairDeviceDialog(context, controller),
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.onPrimary,
-                  minimumSize: const Size.fromHeight(56),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                icon: const Icon(Icons.add_link_rounded, size: 24),
-                label: const Text('Pair device'),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSizes.sectionGap),
-        _MetricGrid(
-          children: [
-            MetricCard(
-              label: 'Child devices',
-              showShadow: true,
-              value: '${summary?.totalDevices ?? 0}',
-              icon: Icons.devices,
-              color: AppColors.primary,
-              caption: '${summary?.onlineDevices ?? 0} online',
-            ),
-            MetricCard(
-              label: 'Screen usage today',
-              showShadow: true,
-              value: _formatMinutes(summary?.totalUsageTodayMinutes ?? 0),
-              icon: Icons.timelapse,
-              color: AppColors.secondary,
-              caption: 'All devices',
-            ),
-            MetricCard(
-              label: 'Blocked attempts',
-              showShadow: true,
-              value: '${summary?.blockedAttemptsToday ?? 0}',
-              icon: Icons.shield_outlined,
-              color: AppColors.danger,
-              caption: 'Today',
-            ),
-            MetricCard(
-              label: 'Unread alerts',
-              showShadow: true,
-              value: '${summary?.unreadAlerts ?? 0}',
-              icon: Icons.notifications_active_outlined,
-              color: AppColors.accent,
-              caption: summary?.currentPlanName ?? 'Plan',
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSizes.sectionGap),
-        if (controller.devices.isEmpty)
-          EmptyStateWidget(
-            icon: Icons.devices_other,
-            title: 'No devices paired',
-            message: 'Pair a child Android device to start monitoring apps.',
-            action: FilledButton.icon(
-              onPressed: () => _showPairDeviceDialog(context, controller),
-              icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Pair device'),
-            ),
-          )
-        else ...[
-          _ActiveDeviceBanner(
-            controller: controller,
-            compact: true,
-            message: 'Overview, rules, and reports use this active device.',
-          ),
-          const SizedBox(height: AppSizes.sectionGap),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 840;
-              final device = controller.selectedDevice;
-              final children = [
-                _ProtectionStatusCard(device: device),
-                _DeviceListCard(controller: controller),
-              ];
-              if (!isWide) {
-                return Column(
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: padding.copyWith(bottom: 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    children[0],
-                    const SizedBox(height: AppSizes.cardGap),
-                    children[1],
+                    if (controller.errorMessage != null) ...[
+                      _InlineError(message: controller.errorMessage!),
+                      const SizedBox(height: 16),
+                    ],
+                    const SectionHeader(
+                      title: 'Parent dashboard',
+                      subtitle: 'Manage child devices, remote rules, protection status, and reports.',
+                    ),
+                    const SizedBox(height: 16),
                   ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: children[0]),
-                  const SizedBox(width: AppSizes.cardGap),
-                  Expanded(child: children[1]),
-                ],
-              );
-            },
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickyPairDeviceDelegate(controller: controller, padding: padding),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: padding.copyWith(top: 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: AppSizes.sectionGap - 16),
+                    _MetricGrid(
+                      children: [
+                        MetricCard(
+                          label: 'Child devices',
+                          showShadow: true,
+                          value: '${summary?.totalDevices ?? 0}',
+                          icon: Icons.devices,
+                          color: AppColors.primary,
+                          caption: '${summary?.onlineDevices ?? 0} online',
+                        ),
+                        MetricCard(
+                          label: 'Screen usage today',
+                          showShadow: true,
+                          value: _formatMinutes(summary?.totalUsageTodayMinutes ?? 0),
+                          icon: Icons.timelapse,
+                          color: AppColors.secondary,
+                          caption: 'All devices',
+                        ),
+                        MetricCard(
+                          label: 'Blocked attempts',
+                          showShadow: true,
+                          value: '${summary?.blockedAttemptsToday ?? 0}',
+                          icon: Icons.shield_outlined,
+                          color: AppColors.danger,
+                          caption: 'Today',
+                        ),
+                        MetricCard(
+                          label: 'Unread alerts',
+                          showShadow: true,
+                          value: '${summary?.unreadAlerts ?? 0}',
+                          icon: Icons.notifications_active_outlined,
+                          color: AppColors.accent,
+                          caption: summary?.currentPlanName ?? 'Plan',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.sectionGap),
+                    if (controller.devices.isEmpty)
+                      EmptyStateWidget(
+                        icon: Icons.devices_other,
+                        title: 'No devices paired',
+                        message: 'Pair a child Android device to start monitoring apps.',
+                        action: FilledButton.icon(
+                          onPressed: () => _showPairDeviceDialog(context, controller),
+                          icon: const Icon(Icons.qr_code_scanner),
+                          label: const Text('Pair device'),
+                        ),
+                      )
+                    else ...[
+                      _ActiveDeviceBanner(
+                        controller: controller,
+                        compact: true,
+                        message: 'Overview, rules, and reports use this active device.',
+                      ),
+                      const SizedBox(height: AppSizes.sectionGap),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isWide = constraints.maxWidth >= 840;
+                          final device = controller.selectedDevice;
+                          final children = [
+                            _ProtectionStatusCard(device: device),
+                            _DeviceListCard(controller: controller),
+                          ];
+                          if (!isWide) {
+                            return Column(
+                              children: [
+                                children[0],
+                                const SizedBox(height: AppSizes.cardGap),
+                                children[1],
+                              ],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: children[0]),
+                              const SizedBox(width: AppSizes.cardGap),
+                              Expanded(child: children[1]),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

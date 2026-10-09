@@ -362,13 +362,20 @@ class _ProtectionStatusCard extends StatelessWidget {
       ),
     ];
 
-    return Card(
-      elevation: 3,
-      shadowColor: colors.shadow.withValues(alpha: 0.12),
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -523,95 +530,192 @@ class _DeviceListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Paired devices',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 14),
-            for (final device in controller.devices) ...[
-              InkWell(
-                borderRadius: BorderRadius.circular(AppSizes.radius),
-                onTap: () => controller.selectDevice(device.id),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isCompact = constraints.maxWidth < 360;
-                    final details = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          device.childName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          '${device.deviceName} - ${device.platform}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.muted),
-                        ),
-                      ],
-                    );
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        crossAxisAlignment: isCompact
-                            ? CrossAxisAlignment.start
-                            : CrossAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: AppColors.primary.withValues(
-                              alpha: device.id == controller.selectedDevice?.id
-                                  ? 0.18
-                                  : 0.08,
-                            ),
-                            child: Text(
-                              device.childName.isEmpty
-                                  ? '?'
-                                  : device.childName[0],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: isCompact
-                                ? Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      details,
-                                      const SizedBox(height: 8),
-                                      OnlineStatusPill(
-                                        isOnline: device.isOnline,
-                                      ),
-                                    ],
-                                  )
-                                : details,
-                          ),
-                          if (!isCompact) ...[
-                            const SizedBox(width: 10),
-                            OnlineStatusPill(isOnline: device.isOnline),
-                          ],
-                        ],
-                      ),
-                    );
-                  },
+            Row(
+              children: [
+                Icon(Icons.devices_rounded, size: 20, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Paired devices',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: '${controller.devices.length} devices connected',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${controller.devices.length}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final device in controller.devices) ...[
+              _DeviceModernTile(
+                device: device,
+                isSelected: device.id == controller.selectedDevice?.id,
+                onTap: () => controller.selectDevice(device.id),
               ),
               if (device != controller.devices.last)
-                const Divider(height: 12, color: AppColors.border),
+                const SizedBox(height: 8),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeviceModernTile extends StatelessWidget {
+  const _DeviceModernTile({
+    required this.device,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final ChildDevice device;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? colors.primary.withValues(alpha: 0.04) 
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected 
+                ? colors.primary.withValues(alpha: 0.3) 
+                : colors.outlineVariant.withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 300;
+            
+            final textContent = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        device.childName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 6),
+                      Icon(Icons.check_circle_rounded, size: 14, color: colors.primary),
+                    ]
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${device.deviceName} • ${device.platform}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+
+            return Row(
+              crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? colors.primary.withValues(alpha: 0.12)
+                        : colors.onSurface.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      device.childName.isEmpty ? '?' : device.childName[0].toUpperCase(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: isCompact 
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            textContent,
+                            const SizedBox(height: 8),
+                            OnlineStatusPill(isOnline: device.isOnline),
+                          ],
+                        )
+                      : textContent,
+                ),
+                if (!isCompact) ...[
+                  const SizedBox(width: 10),
+                  OnlineStatusPill(isOnline: device.isOnline),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

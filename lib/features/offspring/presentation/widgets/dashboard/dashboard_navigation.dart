@@ -358,14 +358,50 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: _buildSection(context),
+    );
+  }
+
+  Widget _buildSection(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 900;
+    // Increased bottom padding to 140 to ensure bottom nav does not block content
+    final pb = isWide ? AppSizes.pagePadding : 140.0;
+    final padding = EdgeInsets.fromLTRB(AppSizes.pagePadding, AppSizes.pagePadding, AppSizes.pagePadding, pb);
+
+    if (controller.section == DashboardSection.overview) {
+      return _OverviewSection(
+        key: const ValueKey('overview'),
+        controller: controller,
+        padding: padding,
+      );
+    }
+
+    Widget child;
+    switch (controller.section) {
+      case DashboardSection.apps:
+        child = _AppsSection(controller: controller);
+        break;
+      case DashboardSection.websites:
+        child = _WebsitesSection(controller: controller);
+        break;
+      case DashboardSection.reports:
+        child = _ReportsSection(controller: controller);
+        break;
+      case DashboardSection.alerts:
+        child = _AlertsSection(controller: controller);
+        break;
+      case DashboardSection.admin:
+        child = _AdminPlansSection(controller: controller);
+        break;
+      default:
+        child = const SizedBox.shrink();
+    }
+
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        AppSizes.pagePadding,
-        AppSizes.pagePadding,
-        AppSizes.pagePadding,
-        isWide ? AppSizes.pagePadding : 104,
-      ),
+      key: ValueKey(controller.section),
+      padding: padding,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1180),
@@ -376,31 +412,11 @@ class _DashboardBody extends StatelessWidget {
                 _InlineError(message: controller.errorMessage!),
                 const SizedBox(height: 16),
               ],
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: _sectionFor(controller.section),
-              ),
+              child,
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _sectionFor(DashboardSection section) {
-    switch (section) {
-      case DashboardSection.overview:
-        return _OverviewSection(controller: controller);
-      case DashboardSection.apps:
-        return _AppsSection(controller: controller);
-      case DashboardSection.websites:
-        return _WebsitesSection(controller: controller);
-      case DashboardSection.reports:
-        return _ReportsSection(controller: controller);
-      case DashboardSection.alerts:
-        return _AlertsSection(controller: controller);
-      case DashboardSection.admin:
-        return _AdminPlansSection(controller: controller);
-    }
   }
 }
