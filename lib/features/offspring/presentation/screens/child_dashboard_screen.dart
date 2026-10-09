@@ -93,7 +93,9 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
 
   void _logout() {
     appDependencies.childSessionController.logout();
-    Navigator.of(context).pushReplacementNamed(RouteNames.auth);
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(RouteNames.auth, (_) => false);
   }
 
   @override
@@ -329,13 +331,13 @@ class _ChildSignedOutScaffold extends StatelessWidget {
             padding: const EdgeInsets.all(AppSizes.pagePadding),
             child: EmptyStateWidget(
               icon: Icons.phone_android,
-              title: 'Child sign in required',
+              title: 'Connect this child device',
               message:
-                  'Use a paired child device name and pairing code to open this dashboard.',
+                  'Enter the pairing code from your parent to connect this phone. No child account is needed.',
               action: FilledButton.icon(
                 onPressed: onGoToSignIn,
                 icon: const Icon(Icons.login),
-                label: const Text('Go to sign in'),
+                label: const Text('Choose device setup'),
               ),
             ),
           ),
@@ -808,7 +810,7 @@ class _ChildDashboardDrawer extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onLogout,
                   icon: const Icon(Icons.logout),
-                  label: const Text('Sign out'),
+                  label: const Text('Exit demo connection'),
                 ),
               ),
             ),
@@ -1916,14 +1918,14 @@ class _PairingInfoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Pairing details',
+              'Parent connection',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Text(
-              'Use this code only with your parent or guardian.',
+              'Your parent manages the rules for this device. No child email or password is needed.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
@@ -1943,7 +1945,7 @@ class _PairingInfoCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      device.pairingCode,
+                      device.deviceName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,

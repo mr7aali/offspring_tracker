@@ -14,9 +14,9 @@ Features:
 - View child device status
 - Update parental control rules remotely
 
-## 1.1 Parent and Child Login
+## 1.1 Parent Login and Child Device Setup
 
-The app supports two separate login experiences.
+Parents sign in with an account. Child phones connect using a pairing code without an email, password, or child account.
 
 Parent login:
 
@@ -25,13 +25,16 @@ Parent login:
 - Parent can pair child devices
 - Parent manages app rules, website rules, reports, alerts, subscriptions, and support
 
-Child login:
+Child device setup:
 
-- Child signs in with child/device name and pairing code
-- Child access is created from a parent-paired device
+- Parent enters child and device names, then generates and copies a pairing code
+- Child enters only that code on the Connect child device screen
+- A connection confirmation opens the child dashboard
 - Child can view their own device status
 - Child can view app limits, blocked apps, website rules, and recent alerts
 - Child cannot manage or change parent rules
+
+Current implementation is a frontend demo using existing in-memory data. To preview the full flow, generate a code as a parent, sign out, and connect as a child in the same app session. `Try demo connection` uses the sample Maya device. Cross-phone communication, persistent sessions, single-use/expiring codes, and secure device authentication require a future backend; none are implemented by this UI change.
 
 ## 2. Child Device Pairing
 
@@ -223,7 +226,7 @@ Features:
 Offspring Tracker will include:
 
 - Parent login/register
-- Child login
+- Child device pairing (no child account)
 - Child device pairing
 - Parent dashboard
 - Child dashboard

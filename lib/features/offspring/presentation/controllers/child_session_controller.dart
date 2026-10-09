@@ -2,14 +2,14 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/child_device.dart';
-import '../../domain/usecases/login_child_device_usecase.dart';
+import '../../domain/usecases/connect_child_device_usecase.dart';
 
 enum ChildSessionStatus { signedOut, signedIn }
 
 class ChildSessionController extends ChangeNotifier {
-  ChildSessionController(this._loginChildDeviceUseCase);
+  ChildSessionController(this._connectChildDeviceUseCase);
 
-  final LoginChildDeviceUseCase _loginChildDeviceUseCase;
+  final ConnectChildDeviceUseCase _connectChildDeviceUseCase;
 
   ChildSessionStatus _status = ChildSessionStatus.signedOut;
   ChildDevice? _currentDevice;
@@ -21,17 +21,14 @@ class ChildSessionController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<bool> login({
-    required String childIdentifier,
-    required String pairingCode,
-  }) async {
+  Future<bool> connect({required String pairingCode}) async {
+    if (_isLoading) return false;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _currentDevice = await _loginChildDeviceUseCase(
-        childIdentifier: childIdentifier,
+      _currentDevice = await _connectChildDeviceUseCase(
         pairingCode: pairingCode,
       );
       _status = ChildSessionStatus.signedIn;
@@ -40,7 +37,7 @@ class ChildSessionController extends ChangeNotifier {
       _errorMessage = failure.message;
       return false;
     } catch (_) {
-      _errorMessage = 'Unable to sign in child device.';
+      _errorMessage = 'Unable to connect this device. Please try again.';
       return false;
     } finally {
       _isLoading = false;

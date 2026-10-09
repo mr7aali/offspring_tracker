@@ -7,25 +7,17 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import 'child_pairing_screen.dart';
 
 enum _LoginRole { parent, child }
 
 extension _LoginRoleUi on _LoginRole {
-  String get title {
-    switch (this) {
-      case _LoginRole.parent:
-        return 'Parent';
-      case _LoginRole.child:
-        return 'Child';
-    }
-  }
-
   String get headline {
     switch (this) {
       case _LoginRole.parent:
         return 'Parent access';
       case _LoginRole.child:
-        return 'Child access';
+        return 'Child device setup';
     }
   }
 
@@ -34,7 +26,7 @@ extension _LoginRoleUi on _LoginRole {
       case _LoginRole.parent:
         return 'Manage child devices, rules, reports, alerts, and account settings.';
       case _LoginRole.child:
-        return 'View app limits, website rules, alerts, and device protection status.';
+        return 'Connect this phone to a parent using a pairing code. No child account needed.';
     }
   }
 
@@ -63,7 +55,9 @@ class AuthScreen extends StatelessWidget {
   void _openRole(BuildContext context, _LoginRole role) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => _RoleAuthScreen(role: role),
+        builder: (context) => role == _LoginRole.child
+            ? const ChildPairingScreen()
+            : const _RoleAuthScreen(),
       ),
     );
   }
@@ -137,7 +131,7 @@ class _RoleSelectionHeader extends StatelessWidget {
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 620),
           child: Text(
-            'Select the role for this session. Parent access manages rules; child access shows a view-only device dashboard.',
+            'Parents sign in to manage their family. Child phones connect with a pairing code.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: AppColors.muted,
@@ -204,7 +198,9 @@ class _RoleChoiceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Continue as ${role.title.toLowerCase()}',
+                      role == _LoginRole.parent
+                          ? 'Parent sign in'
+                          : 'Connect child device',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: role.color,
                         fontWeight: FontWeight.w900,
@@ -224,9 +220,7 @@ class _RoleChoiceCard extends StatelessWidget {
 }
 
 class _RoleAuthScreen extends StatefulWidget {
-  const _RoleAuthScreen({required this.role});
-
-  final _LoginRole role;
+  const _RoleAuthScreen();
 
   @override
   State<_RoleAuthScreen> createState() => _RoleAuthScreenState();
@@ -235,43 +229,24 @@ class _RoleAuthScreen extends StatefulWidget {
 class _RoleAuthScreenState extends State<_RoleAuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController(text: AppStrings.demoEmail);
-  final _passwordController = TextEditingController(
-    text: AppStrings.demoPassword,
-  );
-  final _childIdentifierController = TextEditingController(text: 'Maya');
-  final _childPairingCodeController = TextEditingController(text: 'MAYA7');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _isRegisterMode = false;
   bool _obscurePassword = true;
-
-  bool get _isChild => widget.role == _LoginRole.child;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _childIdentifierController.dispose();
-    _childPairingCodeController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (appDependencies.authController.isLoading) return;
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    if (_isChild) {
-      final success = await appDependencies.childSessionController.login(
-        childIdentifier: _childIdentifierController.text,
-        pairingCode: _childPairingCodeController.text,
-      );
-      if (!mounted || !success) {
-        return;
-      }
-      Navigator.of(context).pushReplacementNamed(RouteNames.childDashboard);
       return;
     }
 
@@ -290,7 +265,9 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
     if (!mounted || !success) {
       return;
     }
-    Navigator.of(context).pushReplacementNamed(RouteNames.dashboard);
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(RouteNames.dashboard, (_) => false);
   }
 
   Future<void> _useDemoParentAccount() async {
@@ -298,18 +275,9 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
     if (!mounted || !success) {
       return;
     }
-    Navigator.of(context).pushReplacementNamed(RouteNames.dashboard);
-  }
-
-  Future<void> _useDemoChildAccount() async {
-    final success = await appDependencies.childSessionController.login(
-      childIdentifier: 'Maya',
-      pairingCode: 'MAYA7',
-    );
-    if (!mounted || !success) {
-      return;
-    }
-    Navigator.of(context).pushReplacementNamed(RouteNames.childDashboard);
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(RouteNames.dashboard, (_) => false);
   }
 
   @override
@@ -317,7 +285,7 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: Text(widget.role.headline),
+        title: const Text('Parent access'),
         leading: IconButton(
           tooltip: 'Choose role',
           onPressed: () {
@@ -337,16 +305,13 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _RoleAuthHeader(role: widget.role),
+                  const _RoleAuthHeader(role: _LoginRole.parent),
                   const SizedBox(height: 18),
                   _AuthFormPanel(
                     formKey: _formKey,
-                    role: widget.role,
                     nameController: _nameController,
                     emailController: _emailController,
                     passwordController: _passwordController,
-                    childIdentifierController: _childIdentifierController,
-                    childPairingCodeController: _childPairingCodeController,
                     isRegisterMode: _isRegisterMode,
                     obscurePassword: _obscurePassword,
                     onModeChanged: (value) {
@@ -358,7 +323,6 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
                     },
                     onSubmit: _submit,
                     onUseDemoParent: _useDemoParentAccount,
-                    onUseDemoChild: _useDemoChildAccount,
                   ),
                 ],
               ),
@@ -397,7 +361,7 @@ class _RoleAuthHeader extends StatelessWidget {
               Text(
                 role == _LoginRole.parent
                     ? 'Parent sign in'
-                    : 'Child device sign in',
+                    : 'Connect child device',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: AppColors.ink,
                   fontWeight: FontWeight.w900,
@@ -421,54 +385,36 @@ class _RoleAuthHeader extends StatelessWidget {
 class _AuthFormPanel extends StatelessWidget {
   const _AuthFormPanel({
     required this.formKey,
-    required this.role,
     required this.nameController,
     required this.emailController,
     required this.passwordController,
-    required this.childIdentifierController,
-    required this.childPairingCodeController,
     required this.isRegisterMode,
     required this.obscurePassword,
     required this.onModeChanged,
     required this.onObscureChanged,
     required this.onSubmit,
     required this.onUseDemoParent,
-    required this.onUseDemoChild,
   });
 
   final GlobalKey<FormState> formKey;
-  final _LoginRole role;
   final TextEditingController nameController;
   final TextEditingController emailController;
   final TextEditingController passwordController;
-  final TextEditingController childIdentifierController;
-  final TextEditingController childPairingCodeController;
   final bool isRegisterMode;
   final bool obscurePassword;
   final ValueChanged<bool> onModeChanged;
   final VoidCallback onObscureChanged;
   final VoidCallback onSubmit;
   final VoidCallback onUseDemoParent;
-  final VoidCallback onUseDemoChild;
-
-  bool get isChild => role == _LoginRole.child;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([
-        appDependencies.authController,
-        appDependencies.childSessionController,
-      ]),
+      animation: appDependencies.authController,
       builder: (context, _) {
         final parentController = appDependencies.authController;
-        final childController = appDependencies.childSessionController;
-        final isLoading = isChild
-            ? childController.isLoading
-            : parentController.isLoading;
-        final errorMessage = isChild
-            ? childController.errorMessage
-            : parentController.errorMessage;
+        final isLoading = parentController.isLoading;
+        final errorMessage = parentController.errorMessage;
 
         return Container(
           decoration: BoxDecoration(
@@ -485,11 +431,7 @@ class _AuthFormPanel extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isChild
-                        ? 'Child device sign in'
-                        : isRegisterMode
-                        ? 'Create parent account'
-                        : 'Welcome back',
+                    isRegisterMode ? 'Create parent account' : 'Welcome back',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: AppColors.ink,
@@ -497,9 +439,7 @@ class _AuthFormPanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    isChild
-                        ? 'Use the child/device name and pairing code from the parent dashboard.'
-                        : isRegisterMode
+                    isRegisterMode
                         ? 'Register a parent profile to start pairing child devices.'
                         : 'Sign in to manage devices and parental control rules.',
                     style: Theme.of(
@@ -507,7 +447,7 @@ class _AuthFormPanel extends StatelessWidget {
                     ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
                   ),
                   const SizedBox(height: 18),
-                  if (!isChild) ...[
+                  ...[
                     SegmentedButton<bool>(
                       segments: const [
                         ButtonSegment(
@@ -528,7 +468,7 @@ class _AuthFormPanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                   ],
-                  if (!isChild && isRegisterMode) ...[
+                  if (isRegisterMode) ...[
                     TextFormField(
                       controller: nameController,
                       textInputAction: TextInputAction.next,
@@ -541,34 +481,7 @@ class _AuthFormPanel extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  if (isChild) ...[
-                    TextFormField(
-                      controller: childIdentifierController,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Child or device name',
-                        hintText: 'Maya',
-                        prefixIcon: Icon(Icons.child_care),
-                      ),
-                      validator: (value) => Validators.requiredText(
-                        value,
-                        'Child or device name',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: childPairingCodeController,
-                      textInputAction: TextInputAction.done,
-                      decoration: const InputDecoration(
-                        labelText: 'Pairing code',
-                        hintText: 'MAYA7',
-                        prefixIcon: Icon(Icons.qr_code_2),
-                      ),
-                      onFieldSubmitted: (_) => onSubmit(),
-                      validator: (value) =>
-                          Validators.requiredText(value, 'Pairing code'),
-                    ),
-                  ] else ...[
+                  ...[
                     TextFormField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -616,30 +529,14 @@ class _AuthFormPanel extends StatelessWidget {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Icon(
-                            isChild
-                                ? Icons.phone_android
-                                : isRegisterMode
-                                ? Icons.person_add
-                                : Icons.login,
-                          ),
-                    label: Text(
-                      isChild
-                          ? 'Open child dashboard'
-                          : isRegisterMode
-                          ? 'Create account'
-                          : 'Sign in',
-                    ),
+                        : Icon(isRegisterMode ? Icons.person_add : Icons.login),
+                    label: Text(isRegisterMode ? 'Create account' : 'Sign in'),
                   ),
                   const SizedBox(height: 10),
                   TextButton.icon(
-                    onPressed: isLoading
-                        ? null
-                        : isChild
-                        ? onUseDemoChild
-                        : onUseDemoParent,
+                    onPressed: isLoading ? null : onUseDemoParent,
                     icon: const Icon(Icons.play_circle_outline),
-                    label: Text(isChild ? 'Use demo child' : 'Use demo parent'),
+                    label: const Text('Use demo parent'),
                   ),
                 ],
               ),

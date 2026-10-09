@@ -7,7 +7,7 @@ import '../features/auth/presentation/controllers/auth_controller.dart';
 import '../features/offspring/data/datasources/offspring_local_datasource.dart';
 import '../features/offspring/data/repositories/offspring_repository_impl.dart';
 import '../features/offspring/domain/usecases/load_dashboard_usecase.dart';
-import '../features/offspring/domain/usecases/login_child_device_usecase.dart';
+import '../features/offspring/domain/usecases/connect_child_device_usecase.dart';
 import '../features/offspring/domain/usecases/manage_notifications_usecase.dart';
 import '../features/offspring/domain/usecases/manage_subscription_usecase.dart';
 import '../features/offspring/domain/usecases/pair_child_device_usecase.dart';
@@ -36,7 +36,7 @@ void setupDependencies() {
       LogoutUseCase(authRepository),
     ),
     childSessionController: ChildSessionController(
-      LoginChildDeviceUseCase(offspringRepository),
+      ConnectChildDeviceUseCase(offspringRepository),
     ),
     dashboardController: DashboardController(
       LoadDashboardUseCase(offspringRepository),

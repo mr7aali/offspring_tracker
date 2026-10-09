@@ -4,89 +4,11 @@ Future<void> _showPairDeviceDialog(
   BuildContext context,
   DashboardController controller,
 ) async {
-  final formKey = GlobalKey<FormState>();
-  final childController = TextEditingController();
-  final deviceController = TextEditingController();
-  final codeController = TextEditingController();
-
-  final result = await showDialog<bool>(
+  await showDialog<void>(
     context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Pair child device'),
-        content: SizedBox(
-          width: 420,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: childController,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Child name',
-                    prefixIcon: Icon(Icons.child_care),
-                  ),
-                  validator: (value) =>
-                      Validators.requiredText(value, 'Child name'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: deviceController,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Device name',
-                    prefixIcon: Icon(Icons.smartphone),
-                  ),
-                  validator: (value) =>
-                      Validators.requiredText(value, 'Device name'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: codeController,
-                  textInputAction: TextInputAction.done,
-                  decoration: const InputDecoration(
-                    labelText: 'Pairing code',
-                    prefixIcon: Icon(Icons.qr_code_2),
-                  ),
-                  validator: (value) =>
-                      Validators.requiredText(value, 'Pairing code'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              if (formKey.currentState?.validate() ?? false) {
-                Navigator.of(context).pop(true);
-              }
-            },
-            icon: const Icon(Icons.link),
-            label: const Text('Pair'),
-          ),
-        ],
-      );
-    },
+    barrierDismissible: false,
+    builder: (_) => PairChildDeviceDialog(controller: controller),
   );
-
-  if (result == true) {
-    await controller.pairDevice(
-      childName: childController.text,
-      deviceName: deviceController.text,
-      pairingCode: codeController.text,
-    );
-  }
-
-  childController.dispose();
-  deviceController.dispose();
-  codeController.dispose();
 }
 
 Future<void> _showLimitDialog(
