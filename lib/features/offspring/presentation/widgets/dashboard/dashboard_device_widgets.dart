@@ -51,7 +51,7 @@ class _ActiveDeviceBanner extends StatelessWidget {
   const _ActiveDeviceBanner({
     required this.controller,
     this.message = 'This section follows the active child device.',
-    this.compact = false,
+    this.compact = false, // Kept for API compatibility, but layout is unified
   });
 
   final DashboardController controller;
@@ -65,150 +65,80 @@ class _ActiveDeviceBanner extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (compact) {
-      final theme = Theme.of(context);
-      final colors = theme.colorScheme;
-      final deviceLabel = '${device.childName} · ${device.deviceName}';
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: colors.outlineVariant.withValues(alpha: 0.5),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.07),
-              blurRadius: 16,
-              offset: const Offset(0, 5),
-            ),
-          ],
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colors.primary.withValues(alpha: 0.2),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.phone_android_rounded,
-                size: 20,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: colors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              device.childName.isNotEmpty ? device.childName[0].toUpperCase() : '?',
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: colors.primary,
+                fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Tooltip(
-                message: deviceLabel,
-                child: Text(
-                  deviceLabel,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, // Ensures minimal height
+              children: [
+                Text(
+                  '${device.childName} • ${device.deviceName}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                     color: colors.onSurface,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: () => _openChildDevicesScreen(context, controller),
-              style: TextButton.styleFrom(
-                foregroundColor: colors.primary,
-                backgroundColor: colors.primary.withValues(alpha: 0.08),
-                minimumSize: const Size(0, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                textStyle: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-              label: const Text('Change'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(AppSizes.radius),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.16)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 560;
-          final title = Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.14),
-                child: Text(
-                  device.childName.isEmpty ? '?' : device.childName[0],
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w900,
+                Text(
+                  message,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.muted,
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${device.childName} - ${device.deviceName}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      message,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-          final action = TextButton.icon(
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
             onPressed: () => _openChildDevicesScreen(context, controller),
-            icon: const Icon(Icons.swap_horiz),
-            label: const Text('Change'),
-          );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [title, const SizedBox(height: 8), action],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(child: title),
-              const SizedBox(width: 12),
-              action,
-            ],
-          );
-        },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.primary,
+              side: BorderSide(color: colors.primary.withValues(alpha: 0.3)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              minimumSize: const Size(0, 36),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Change',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ),
+        ],
       ),
     );
   }

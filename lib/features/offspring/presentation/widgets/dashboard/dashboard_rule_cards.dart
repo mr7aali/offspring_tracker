@@ -16,28 +16,45 @@ class _AppRuleCard extends StatelessWidget {
     final progress = app.hasLimit
         ? (app.usageTodayMinutes / app.dailyLimitMinutes).clamp(0.0, 1.0)
         : 0.0;
-    final color = app.isBlocked
-        ? AppColors.danger
-        : _categoryColor(app.category);
+    final color = app.isBlocked ? AppColors.danger : _categoryColor(app.category);
+    final isBlocked = app.isBlocked;
 
-    return Card(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isBlocked ? AppColors.danger.withValues(alpha: 0.03) : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isBlocked ? AppColors.danger.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: isBlocked ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.ink.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 760;
-            final title = Row(
+            
+            final titleRow = Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSizes.radius),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(_categoryIcon(app.category), color: color),
+                  child: Icon(_categoryIcon(app.category), color: color, size: 26),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,88 +62,162 @@ class _AppRuleCard extends StatelessWidget {
                       Text(
                         app.name,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         app.packageName,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            );
-
-            final controls = Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                StatusPill(
-                  label: app.category.label,
-                  icon: _categoryIcon(app.category),
-                  color: _categoryColor(app.category),
-                ),
-                StatusPill(
-                  label: app.isBlocked ? 'Blocked' : 'Allowed',
-                  icon: app.isBlocked ? Icons.block : Icons.check_circle,
-                  color: app.isBlocked ? AppColors.danger : AppColors.secondary,
-                ),
-                OutlinedButton.icon(
-                  onPressed: onLimitTap,
-                  icon: const Icon(Icons.timer_outlined),
-                  label: Text(
-                    app.hasLimit
-                        ? '${app.dailyLimitMinutes} min limit'
-                        : 'No limit',
+                if (!isWide) ...[
+                  const SizedBox(width: 12),
+                  Switch(
+                    value: isBlocked,
+                    onChanged: onBlockChanged,
+                    activeColor: AppColors.danger,
                   ),
-                ),
-                Switch(value: app.isBlocked, onChanged: onBlockChanged),
+                ],
               ],
             );
 
-            final usage = Column(
+            final usageInfo = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Text(
-                        app.hasLimit
-                            ? '${_formatMinutes(app.usageTodayMinutes)} used, ${_formatMinutes(app.remainingMinutes)} left'
-                            : '${_formatMinutes(app.usageTodayMinutes)} used today',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.muted,
-                        ),
+                    Text(
+                      app.hasLimit
+                          ? '${_formatMinutes(app.usageTodayMinutes)} used • ${_formatMinutes(app.remainingMinutes)} left'
+                          : '${_formatMinutes(app.usageTodayMinutes)} used today',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isBlocked ? AppColors.danger.withValues(alpha: 0.8) : AppColors.ink.withValues(alpha: 0.8),
                       ),
                     ),
                     Text(
-                      'Week ${_formatMinutes(app.weeklyUsageMinutes)}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      'Week: ${_formatMinutes(app.weeklyUsageMinutes)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.muted,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: app.hasLimit ? progress : null,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(AppSizes.radius),
-                  color: progress >= 1 ? AppColors.danger : color,
-                  backgroundColor: AppColors.border,
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: app.hasLimit ? progress : (isBlocked ? 0 : null),
+                    minHeight: 10,
+                    color: progress >= 1 || isBlocked ? AppColors.danger : color,
+                    backgroundColor: isBlocked ? AppColors.danger.withValues(alpha: 0.1) : AppColors.border,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Blocked attempts: ${app.blockedAttempts} - Last opened ${DateFormatter.relative(app.lastOpenedAt)}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                Row(
+                  children: [
+                    const Icon(Icons.block, size: 12, color: AppColors.muted),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${app.blockedAttempts} blocks',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Active ${DateFormatter.relative(app.lastOpenedAt)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ],
+            );
+
+            final badgesAndActions = Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _categoryColor(app.category).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _categoryColor(app.category).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_categoryIcon(app.category), size: 14, color: _categoryColor(app.category)),
+                      const SizedBox(width: 6),
+                      Text(
+                        app.category.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _categoryColor(app.category),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isBlocked)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.block, size: 14, color: AppColors.danger),
+                        SizedBox(width: 6),
+                        Text(
+                          'Blocked',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ActionChip(
+                  onPressed: onLimitTap,
+                  backgroundColor: app.hasLimit ? AppColors.secondary.withValues(alpha: 0.1) : Colors.transparent,
+                  side: BorderSide(
+                    color: app.hasLimit ? AppColors.secondary.withValues(alpha: 0.3) : AppColors.border,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: app.hasLimit ? AppColors.secondary : AppColors.muted,
+                  ),
+                  avatar: Icon(
+                    Icons.timer_outlined,
+                    size: 16,
+                    color: app.hasLimit ? AppColors.secondary : AppColors.muted,
+                  ),
+                  label: Text(
+                    app.hasLimit ? '${app.dailyLimitMinutes}m limit' : 'Set limit',
+                  ),
                 ),
               ],
             );
@@ -135,23 +226,40 @@ class _AppRuleCard extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  title,
-                  const SizedBox(height: 14),
-                  usage,
-                  const SizedBox(height: 14),
-                  controls,
+                  titleRow,
+                  const SizedBox(height: 18),
+                  usageInfo,
+                  const SizedBox(height: 18),
+                  badgesAndActions,
                 ],
               );
             }
 
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(flex: 3, child: title),
-                const SizedBox(width: 18),
-                Expanded(flex: 4, child: usage),
-                const SizedBox(width: 18),
-                Expanded(flex: 3, child: controls),
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      titleRow,
+                      const SizedBox(height: 12),
+                      badgesAndActions,
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  flex: 3,
+                  child: usageInfo,
+                ),
+                const SizedBox(width: 16),
+                Switch(
+                  value: isBlocked,
+                  onChanged: onBlockChanged,
+                  activeColor: AppColors.danger,
+                ),
               ],
             );
           },
