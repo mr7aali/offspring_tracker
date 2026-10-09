@@ -71,6 +71,79 @@ class _StickyPairDeviceDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _StickyPairDeviceDelegate oldDelegate) => true;
 }
 
+class _StickyAddDomainDelegate extends SliverPersistentHeaderDelegate {
+  _StickyAddDomainDelegate({required this.controller, required this.padding});
+  
+  final DashboardController controller;
+  final EdgeInsets padding;
+  
+  @override
+  double get minExtent => 88.0; 
+  @override
+  double get maxExtent => 88.0;
+  
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      color: Colors.transparent, // Transparent to act like a floating button
+      padding: EdgeInsets.symmetric(horizontal: padding.left),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1180),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+            child: Material(
+              elevation: overlapsContent ? 12 : 4,
+              shadowColor: colors.primary.withValues(alpha: overlapsContent ? 0.5 : 0.35),
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      colors.primary,
+                      Color.lerp(colors.primary, colors.secondary, 0.45)!,
+                    ],
+                  ),
+                ),
+                child: TextButton.icon(
+                  onPressed: controller.selectedDevice == null
+                      ? null
+                      : () => _showWebsiteDialog(context, controller),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.onPrimary,
+                    minimumSize: const Size.fromHeight(56),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 24),
+                  label: const Text('Add domain'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyAddDomainDelegate oldDelegate) => true;
+}
+
 class _OverviewSection extends StatelessWidget {
   const _OverviewSection({super.key, required this.controller, required this.padding});
 
@@ -279,66 +352,120 @@ class _AppsSection extends StatelessWidget {
 }
 
 class _WebsitesSection extends StatelessWidget {
-  const _WebsitesSection({required this.controller});
+  const _WebsitesSection({super.key, required this.controller, required this.padding});
 
   final DashboardController controller;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey('websites'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(
-          title: 'Website and domain blocking',
-          subtitle:
-              'Block domains, include subdomains, and sync filtering rules remotely.',
-          action: FilledButton.icon(
-            onPressed: controller.selectedDevice == null
-                ? null
-                : () => _showWebsiteDialog(context, controller),
-            icon: const Icon(Icons.add),
-            label: const Text('Add domain'),
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: padding.copyWith(bottom: 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (controller.errorMessage != null) ...[
+                      _InlineError(message: controller.errorMessage!),
+                      const SizedBox(height: 16),
+                    ],
+                    const SectionHeader(
+                      title: 'Website and domain blocking',
+                      subtitle: 'Block domains, include subdomains, and sync filtering rules remotely.',
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: AppSizes.sectionGap),
-        if (controller.selectedDevice == null)
-          const EmptyStateWidget(
-            icon: Icons.public_off,
-            title: 'No selected device',
-            message: 'Pair and select a device to manage domain rules.',
-          )
-        else if (controller.websiteRules.isEmpty)
-          EmptyStateWidget(
-            icon: Icons.public_off,
-            title: 'No domain rules yet',
-            message: 'Add a domain to block websites on the child device.',
-            action: FilledButton.icon(
-              onPressed: () => _showWebsiteDialog(context, controller),
-              icon: const Icon(Icons.add),
-              label: const Text('Add domain'),
-            ),
-          )
-        else ...[
-          _ActiveDeviceBanner(
-            controller: controller,
-            message: 'Website rules apply to the active child device.',
-          ),
-          const SizedBox(height: AppSizes.cardGap),
-          Column(
-            children: [
-              for (final rule in controller.websiteRules) ...[
-                _WebsiteRuleCard(
-                  rule: rule,
-                  onToggle: (value) =>
-                      controller.toggleWebsiteRule(rule, value),
-                  onDelete: () => controller.removeWebsiteRule(rule),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickyAddDomainDelegate(controller: controller, padding: padding),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: padding.copyWith(top: 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: AppSizes.sectionGap - 16),
+                    if (controller.selectedDevice == null)
+                      const EmptyStateWidget(
+                        icon: Icons.public_off,
+                        title: 'No selected device',
+                        message: 'Pair and select a device to manage domain rules.',
+                      )
+                    else if (controller.websiteRules.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: Image.asset(
+                                'assets/images/sites_empty.jpg',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'No domain rules yet',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tap the "Add domain" button above to start blocking websites. Keep your child’s web browsing safe and secure.',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: AppColors.muted,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      for (final rule in controller.websiteRules) ...[
+                        _WebsiteRuleCard(
+                          rule: rule,
+                          onToggle: (value) => controller.toggleWebsiteRule(rule, value),
+                          onDelete: () => controller.removeWebsiteRule(rule),
+                        ),
+                        const SizedBox(height: AppSizes.cardGap),
+                      ],
+                    ],
+                  ],
                 ),
-                const SizedBox(height: AppSizes.cardGap),
-              ],
-            ],
+              ),
+            ),
           ),
-        ],
+        ),
       ],
     );
   }
@@ -386,11 +513,6 @@ class _ReportsSection extends StatelessWidget {
             message: 'Usage history appears after a child device is paired.',
           )
         else ...[
-          _ActiveDeviceBanner(
-            controller: controller,
-            message: 'Reports are filtered by the active child device.',
-          ),
-          const SizedBox(height: AppSizes.cardGap),
           _MetricGrid(
             children: [
               MetricCard(
@@ -426,30 +548,46 @@ class _ReportsSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSizes.sectionGap),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'App-wise weekly usage',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  for (final app in apps) ...[
-                    _UsageBar(
-                      label: app.name,
-                      valueLabel: _formatMinutes(app.weeklyUsageMinutes),
-                      progress: app.weeklyUsageMinutes / maxWeekly,
-                      color: _categoryColor(app.category),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ],
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.ink.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'App-wise weekly usage',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                for (final app in apps) ...[
+                  _UsageBar(
+                    label: app.name,
+                    valueLabel: _formatMinutes(app.weeklyUsageMinutes),
+                    progress: app.weeklyUsageMinutes / maxWeekly,
+                    color: _categoryColor(app.category),
+                    icon: _categoryIcon(app.category),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ],
             ),
           ),
         ],
@@ -473,13 +611,6 @@ class _AlertsSection extends StatelessWidget {
           title: 'Notifications',
           subtitle:
               'Alerts for limits, blocked attempts, new apps, offline devices, and syncs.',
-          action: OutlinedButton.icon(
-            onPressed: controller.notifications.any((alert) => !alert.isRead)
-                ? controller.markNotificationsRead
-                : null,
-            icon: const Icon(Icons.done_all),
-            label: const Text('Mark read'),
-          ),
         ),
         const SizedBox(height: AppSizes.sectionGap),
         if (controller.notifications.isEmpty)

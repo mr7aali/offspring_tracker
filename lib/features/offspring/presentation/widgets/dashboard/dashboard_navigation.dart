@@ -36,13 +36,6 @@ const List<_DashboardDestination> _dashboardDestinations = [
     icon: Icons.notifications_none_rounded,
     selectedIcon: Icons.notifications_active_rounded,
   ),
-  _DashboardDestination(
-    section: DashboardSection.admin,
-    label: 'Admin',
-    railLabel: 'Admin & plans',
-    icon: Icons.verified_user_outlined,
-    selectedIcon: Icons.workspace_premium_rounded,
-  ),
 ];
 
 class _DashboardDestination {
@@ -384,16 +377,16 @@ class _DashboardBody extends StatelessWidget {
         child = _AppsSection(controller: controller);
         break;
       case DashboardSection.websites:
-        child = _WebsitesSection(controller: controller);
-        break;
+        return _WebsitesSection(
+          key: const ValueKey('websites'),
+          controller: controller,
+          padding: padding,
+        );
       case DashboardSection.reports:
         child = _ReportsSection(controller: controller);
         break;
       case DashboardSection.alerts:
         child = _AlertsSection(controller: controller);
-        break;
-      case DashboardSection.admin:
-        child = _AdminPlansSection(controller: controller);
         break;
       default:
         child = const SizedBox.shrink();

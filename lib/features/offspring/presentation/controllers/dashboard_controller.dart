@@ -15,7 +15,7 @@ import '../../domain/usecases/pair_child_device_usecase.dart';
 import '../../domain/usecases/update_app_rule_usecase.dart';
 import '../../domain/usecases/update_website_rule_usecase.dart';
 
-enum DashboardSection { overview, apps, websites, reports, alerts, admin }
+enum DashboardSection { overview, apps, websites, reports, alerts }
 
 class DashboardController extends ChangeNotifier {
   DashboardController(

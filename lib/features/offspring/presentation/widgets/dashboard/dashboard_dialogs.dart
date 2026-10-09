@@ -4,9 +4,10 @@ Future<void> _showPairDeviceDialog(
   BuildContext context,
   DashboardController controller,
 ) async {
-  await showDialog<void>(
+  await showModalBottomSheet<void>(
     context: context,
-    barrierDismissible: false,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
     builder: (_) => PairChildDeviceDialog(controller: controller),
   );
 }
@@ -21,48 +22,145 @@ Future<void> _showLimitDialog(
   );
   final formKey = GlobalKey<FormState>();
 
-  final minutes = await showDialog<int>(
+  final minutes = await showModalBottomSheet<int>(
     context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
     builder: (context) {
-      return AlertDialog(
-        title: Text('Set ${app.name} limit'),
-        content: SizedBox(
-          width: 360,
-          child: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: textController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Daily minutes',
-                prefixIcon: Icon(Icons.timer_outlined),
-                helperText: 'Use 0 for no limit',
-              ),
-              validator: (value) {
-                final minutes = int.tryParse(value ?? '');
-                if (minutes == null || minutes < 0 || minutes > 1440) {
-                  return 'Enter 0 to 1440 minutes';
-                }
-                return null;
-              },
-            ),
+      final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _categoryColor(app.category).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(_categoryIcon(app.category), color: _categoryColor(app.category)),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Set limit for ${app.name}',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Daily screen time allowance',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: colors.surfaceContainerHighest,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Input Form
+                  Form(
+                    key: formKey,
+                    child: TextFormField(
+                      controller: textController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      decoration: InputDecoration(
+                        labelText: 'Daily minutes',
+                        prefixIcon: const Icon(Icons.timer_outlined),
+                        suffixText: 'min',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        final minutes = int.tryParse(value ?? '');
+                        if (minutes == null || minutes < 0 || minutes > 1440) {
+                          return 'Enter 0 to 1440 minutes';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Presets
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _PresetChip(label: 'No limit', value: 0, textController: textController),
+                      _PresetChip(label: '15m', value: 15, textController: textController),
+                      _PresetChip(label: '30m', value: 30, textController: textController),
+                      _PresetChip(label: '1h', value: 60, textController: textController),
+                      _PresetChip(label: '2h', value: 120, textController: textController),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  // Actions
+                  FilledButton(
+                    onPressed: () {
+                      if (formKey.currentState?.validate() ?? false) {
+                        Navigator.of(context).pop(int.parse(textController.text));
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Save Limit',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              if (formKey.currentState?.validate() ?? false) {
-                Navigator.of(context).pop(int.parse(textController.text));
-              }
-            },
-            icon: const Icon(Icons.save),
-            label: const Text('Save'),
-          ),
-        ],
       );
     },
   );
@@ -70,7 +168,30 @@ Future<void> _showLimitDialog(
   if (minutes != null) {
     await controller.updateAppLimit(app, minutes);
   }
-  textController.dispose();
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.label,
+    required this.value,
+    required this.textController,
+  });
+
+  final String label;
+  final int value;
+  final TextEditingController textController;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      onPressed: () {
+        textController.text = value.toString();
+      },
+      label: Text(label),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+    );
+  }
 }
 
 Future<void> _showWebsiteDialog(
@@ -81,61 +202,153 @@ Future<void> _showWebsiteDialog(
   final domainController = TextEditingController();
   var includesSubdomains = true;
 
-  final result = await showDialog<bool>(
+  final result = await showModalBottomSheet<bool>(
     context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
     builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Add blocked domain'),
-            content: SizedBox(
-              width: 420,
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: domainController,
-                      keyboardType: TextInputType.url,
-                      decoration: const InputDecoration(
-                        labelText: 'Domain',
-                        hintText: 'example.com',
-                        prefixIcon: Icon(Icons.public),
+      final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      validator: Validators.domain,
                     ),
-                    const SizedBox(height: 10),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: includesSubdomains,
-                      onChanged: (value) {
-                        setState(() => includesSubdomains = value ?? true);
-                      },
-                      title: const Text('Block subdomains'),
-                      controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 24),
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: colors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.public, color: colors.primary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add blocked domain',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Block access to a website',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: colors.surfaceContainerHighest,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Input Form
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: domainController,
+                          keyboardType: TextInputType.url,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            labelText: 'Domain',
+                            hintText: 'example.com',
+                            prefixIcon: const Icon(Icons.language),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: Validators.domain,
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+                          ),
+                          child: CheckboxListTile(
+                            value: includesSubdomains,
+                            onChanged: (value) {
+                              setState(() => includesSubdomains = value ?? true);
+                            },
+                            title: const Text(
+                              'Block subdomains',
+                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              'e.g. news.example.com',
+                              style: TextStyle(color: AppColors.muted, fontSize: 12),
+                            ),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton.icon(
-                onPressed: () {
-                  if (formKey.currentState?.validate() ?? false) {
-                    Navigator.of(context).pop(true);
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
-              ),
-            ],
-          );
-        },
+                  ),
+                  const SizedBox(height: 32),
+                  // Actions
+                  FilledButton(
+                    onPressed: () {
+                      if (formKey.currentState?.validate() ?? false) {
+                        Navigator.of(context).pop(true);
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Add Domain',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       );
     },
   );
@@ -146,5 +359,4 @@ Future<void> _showWebsiteDialog(
       includesSubdomains: includesSubdomains,
     );
   }
-  domainController.dispose();
 }
