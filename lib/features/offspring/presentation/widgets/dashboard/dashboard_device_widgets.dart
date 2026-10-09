@@ -335,49 +335,114 @@ class _ProtectionStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentDevice = device;
-    if (currentDevice == null) {
-      return const SizedBox.shrink();
-    }
+    if (currentDevice == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final enabledCount = currentDevice.enabledProtectionCount;
+    final protections = [
+      (
+        'Usage access',
+        currentDevice.usageAccessEnabled,
+        Icons.query_stats_rounded,
+      ),
+      (
+        'VPN / domain filter',
+        currentDevice.vpnFilterEnabled,
+        Icons.vpn_lock_outlined,
+      ),
+      (
+        'Background service',
+        currentDevice.backgroundServiceRunning,
+        Icons.sync_rounded,
+      ),
+      (
+        'Protected mode',
+        currentDevice.protectedModeEnabled,
+        Icons.shield_outlined,
+      ),
+    ];
 
     return Card(
+      elevation: 3,
+      shadowColor: colors.shadow.withValues(alpha: 0.12),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Icon(Icons.shield_outlined, size: 20, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Child device protection',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: '$enabledCount of 4 protections enabled',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$enabledCount/4',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
             Text(
-              'Child device protection',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              '${currentDevice.deviceName} - synced ${DateFormatter.relative(currentDevice.lastSyncAt)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${currentDevice.deviceName} last synced ${DateFormatter.relative(currentDevice.lastSyncAt)}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-            ),
-            const SizedBox(height: 16),
-            _ProtectionRow(
-              label: 'Usage access',
-              enabled: currentDevice.usageAccessEnabled,
-              icon: Icons.query_stats,
-            ),
-            _ProtectionRow(
-              label: 'VPN/domain filter',
-              enabled: currentDevice.vpnFilterEnabled,
-              icon: Icons.vpn_lock_outlined,
-            ),
-            _ProtectionRow(
-              label: 'Background service',
-              enabled: currentDevice.backgroundServiceRunning,
-              icon: Icons.sync,
-            ),
-            _ProtectionRow(
-              label: 'Protected mode',
-              enabled: currentDevice.protectedModeEnabled,
-              icon: Icons.admin_panel_settings,
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns =
+                    constraints.maxWidth >= 260 &&
+                        MediaQuery.textScalerOf(context).scale(12) <= 18
+                    ? 2
+                    : 1;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final protection in protections)
+                      SizedBox(
+                        width:
+                            (constraints.maxWidth - (columns - 1) * 8) /
+                            columns,
+                        child: _ProtectionTile(
+                          label: protection.$1,
+                          enabled: protection.$2,
+                          icon: protection.$3,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -386,62 +451,66 @@ class _ProtectionStatusCard extends StatelessWidget {
   }
 }
 
-class _ProtectionRow extends StatelessWidget {
-  const _ProtectionRow({
+class _ProtectionTile extends StatelessWidget {
+  const _ProtectionTile({
     required this.label,
     required this.enabled,
     required this.icon,
   });
-
   final String label;
   final bool enabled;
   final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact = constraints.maxWidth < 360;
-          final title = Row(
-            children: [
-              Icon(
-                icon,
-                color: enabled ? AppColors.secondary : AppColors.muted,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          );
-          final status = StatusPill(
-            label: enabled ? 'Active' : 'Needs setup',
-            icon: enabled ? Icons.check_circle : Icons.info_outline,
-            color: enabled ? AppColors.secondary : AppColors.accent,
-          );
-
-          if (isCompact) {
-            return Column(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final statusColor = enabled ? colors.secondary : colors.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colors.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [title, const SizedBox(height: 8), status],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(child: title),
-              const SizedBox(width: 10),
-              status,
-            ],
-          );
-        },
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Icon(
+                      enabled
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.info_outline_rounded,
+                      size: 12,
+                      color: statusColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        enabled ? 'Active' : 'Needs setup',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
