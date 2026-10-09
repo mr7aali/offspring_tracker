@@ -11,6 +11,7 @@ class MetricCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.caption,
+    this.showShadow = false,
   });
 
   final String label;
@@ -18,10 +19,16 @@ class MetricCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? caption;
+  final bool showShadow;
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: showShadow ? 4 : null,
+      shadowColor: showShadow
+          ? Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18)
+          : null,
+      surfaceTintColor: showShadow ? Colors.transparent : null,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(

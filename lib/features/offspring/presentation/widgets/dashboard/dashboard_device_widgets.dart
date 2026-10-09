@@ -51,16 +51,91 @@ class _ActiveDeviceBanner extends StatelessWidget {
   const _ActiveDeviceBanner({
     required this.controller,
     this.message = 'This section follows the active child device.',
+    this.compact = false,
   });
 
   final DashboardController controller;
   final String message;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final device = controller.selectedDevice;
     if (device == null) {
       return const SizedBox.shrink();
+    }
+
+    if (compact) {
+      final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      final deviceLabel = '${device.childName} · ${device.deviceName}';
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.07),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.phone_android_rounded,
+                size: 20,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Tooltip(
+                message: deviceLabel,
+                child: Text(
+                  deviceLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: () => _openChildDevicesScreen(context, controller),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.primary,
+                backgroundColor: colors.primary.withValues(alpha: 0.08),
+                minimumSize: const Size(0, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                textStyle: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+              label: const Text('Change'),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(

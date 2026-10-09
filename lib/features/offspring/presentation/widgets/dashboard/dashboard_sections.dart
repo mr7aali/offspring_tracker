@@ -8,6 +8,7 @@ class _OverviewSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = controller.summary;
+    final colors = Theme.of(context).colorScheme;
     if (summary == null && controller.isLoading) {
       return const _SectionLoader();
     }
@@ -16,14 +17,52 @@ class _OverviewSection extends StatelessWidget {
       key: const ValueKey('overview'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
+        const SectionHeader(
           title: 'Parent dashboard',
           subtitle:
               'Manage child devices, remote rules, protection status, and reports.',
-          action: FilledButton.icon(
-            onPressed: () => _showPairDeviceDialog(context, controller),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Pair device'),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: Material(
+            elevation: 5,
+            shadowColor: colors.primary.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(14),
+            clipBehavior: Clip.antiAlias,
+            child: Ink(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    colors.primary,
+                    Color.lerp(colors.primary, colors.secondary, 0.45)!,
+                  ],
+                ),
+              ),
+              child: TextButton.icon(
+                onPressed: () => _showPairDeviceDialog(context, controller),
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.onPrimary,
+                  minimumSize: const Size.fromHeight(56),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                icon: const Icon(Icons.add_link_rounded, size: 24),
+                label: const Text('Pair device'),
+              ),
+            ),
           ),
         ),
         const SizedBox(height: AppSizes.sectionGap),
@@ -31,6 +70,7 @@ class _OverviewSection extends StatelessWidget {
           children: [
             MetricCard(
               label: 'Child devices',
+              showShadow: true,
               value: '${summary?.totalDevices ?? 0}',
               icon: Icons.devices,
               color: AppColors.primary,
@@ -38,6 +78,7 @@ class _OverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'Screen usage today',
+              showShadow: true,
               value: _formatMinutes(summary?.totalUsageTodayMinutes ?? 0),
               icon: Icons.timelapse,
               color: AppColors.secondary,
@@ -45,6 +86,7 @@ class _OverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'Blocked attempts',
+              showShadow: true,
               value: '${summary?.blockedAttemptsToday ?? 0}',
               icon: Icons.shield_outlined,
               color: AppColors.danger,
@@ -52,6 +94,7 @@ class _OverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'Unread alerts',
+              showShadow: true,
               value: '${summary?.unreadAlerts ?? 0}',
               icon: Icons.notifications_active_outlined,
               color: AppColors.accent,
@@ -74,6 +117,7 @@ class _OverviewSection extends StatelessWidget {
         else ...[
           _ActiveDeviceBanner(
             controller: controller,
+            compact: true,
             message: 'Overview, rules, and reports use this active device.',
           ),
           const SizedBox(height: AppSizes.sectionGap),
