@@ -18,6 +18,8 @@ class _AppRuleCard extends StatelessWidget {
         : 0.0;
     final color = app.isBlocked ? AppColors.danger : _categoryColor(app.category);
     final isBlocked = app.isBlocked;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),

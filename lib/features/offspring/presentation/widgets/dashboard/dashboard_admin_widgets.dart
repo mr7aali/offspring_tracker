@@ -8,33 +8,40 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _alertColor(notification.type);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: !notification.isRead 
-            ? color.withValues(alpha: 0.04) 
-            : Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        color: !notification.isRead ? color.withValues(alpha: 0.04) : colors.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: !notification.isRead
-              ? color.withValues(alpha: 0.2)
-              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: !notification.isRead ? color.withValues(alpha: 0.3) : colors.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
+        boxShadow: [
+          if (notification.isRead)
+            BoxShadow(
+              color: AppColors.ink.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(_alertIcon(notification.type), color: color, size: 22),
+            child: Icon(_alertIcon(notification.type), color: color, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -42,23 +49,33 @@ class _NotificationCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         notification.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
+                          fontSize: 15,
                           color: AppColors.ink,
                         ),
                       ),
                     ),
                     if (!notification.isRead) ...[
                       const SizedBox(width: 8),
-                      StatusPill(
-                        label: 'New',
-                        icon: Icons.circle,
-                        color: color,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'New',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: color,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -66,7 +83,7 @@ class _NotificationCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   notification.message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppColors.muted,
                     height: 1.4,
                   ),
@@ -82,7 +99,7 @@ class _NotificationCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       '${notification.type.label} • ${DateFormatter.relative(notification.createdAt)}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      style: theme.textTheme.labelMedium?.copyWith(
                         color: AppColors.muted.withValues(alpha: 0.8),
                         fontWeight: FontWeight.w700,
                       ),

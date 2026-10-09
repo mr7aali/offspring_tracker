@@ -1281,6 +1281,7 @@ class _ChildOverviewSection extends StatelessWidget {
           children: [
             MetricCard(
               label: 'Usage today',
+              showShadow: true,
               value: _formatMinutes(data.totalUsageToday),
               icon: Icons.timelapse,
               color: AppColors.primary,
@@ -1288,6 +1289,7 @@ class _ChildOverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'This week',
+              showShadow: true,
               value: _formatMinutes(data.totalWeeklyUsage),
               icon: Icons.date_range,
               color: AppColors.secondary,
@@ -1295,6 +1297,7 @@ class _ChildOverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'Blocked apps',
+              showShadow: true,
               value: '${data.blockedApps}',
               icon: Icons.block,
               color: AppColors.danger,
@@ -1302,6 +1305,7 @@ class _ChildOverviewSection extends StatelessWidget {
             ),
             MetricCard(
               label: 'Alerts',
+              showShadow: true,
               value: '${data.unreadAlerts}',
               icon: Icons.notifications_active_outlined,
               color: AppColors.accent,
@@ -1316,9 +1320,7 @@ class _ChildOverviewSection extends StatelessWidget {
             _DeviceSyncCard(device: device),
           ],
         ),
-        const SizedBox(height: AppSizes.sectionGap),
-        _ParentRulesNoticeCard(data: data),
-        const SizedBox(height: AppSizes.sectionGap),
+
         SectionHeader(
           title: 'Today at a glance',
           subtitle: limitedApps.isEmpty
@@ -1616,20 +1618,20 @@ class _ChildMetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final crossAxisCount = width >= 980
+        final columns = constraints.maxWidth >= 960
             ? 4
-            : width >= 560
+            : constraints.maxWidth >= 320
             ? 2
             : 1;
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSizes.cardGap,
-          crossAxisSpacing: AppSizes.cardGap,
-          childAspectRatio: width < 420 ? 2.55 : 3.25,
-          children: children,
+        const spacing = 10.0;
+        final width =
+            (constraints.maxWidth - ((columns - 1) * spacing)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final child in children) SizedBox(width: width, child: child),
+          ],
         );
       },
     );
@@ -1672,75 +1674,6 @@ class _ChildResponsiveRow extends StatelessWidget {
   }
 }
 
-class _ParentRulesNoticeCard extends StatelessWidget {
-  const _ParentRulesNoticeCard({required this.data});
-
-  final _ChildDashboardData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppSizes.radius),
-              ),
-              child: const Icon(
-                Icons.supervisor_account_outlined,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Rules are managed by your parent',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'You can view app limits, website rules, and alerts here. If something needs changing, ask your parent from their dashboard.',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      StatusPill(
-                        label: '${data.blockedApps} blocked apps',
-                        icon: Icons.block,
-                        color: AppColors.danger,
-                      ),
-                      StatusPill(
-                        label: '${data.activeWebsiteRules} website rules',
-                        icon: Icons.public_off_outlined,
-                        color: AppColors.secondary,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _ProtectionStatusCard extends StatelessWidget {
   const _ProtectionStatusCard({required this.device});
@@ -1749,38 +1682,193 @@ class _ProtectionStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final enabledCount = device.enabledProtectionCount;
+    final protections = [
+      ('Usage access', device.usageAccessEnabled, Icons.query_stats_rounded),
+      ('VPN / filter', device.vpnFilterEnabled, Icons.vpn_lock_outlined),
+      ('Background sync', device.backgroundServiceRunning, Icons.sync_rounded),
+      ('Protected mode', device.protectedModeEnabled, Icons.shield_outlined),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Protection status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            Row(
+              children: [
+                Icon(Icons.shield_outlined, size: 20, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Protection status',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: '$enabledCount of 4 protections enabled',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$enabledCount/4',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            _ProtectionLine(
-              icon: Icons.query_stats,
-              label: 'Usage access',
-              enabled: device.usageAccessEnabled,
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns =
+                    constraints.maxWidth >= 260 &&
+                        MediaQuery.textScalerOf(context).scale(12) <= 18
+                    ? 2
+                    : 1;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final protection in protections)
+                      SizedBox(
+                        width:
+                            (constraints.maxWidth - (columns - 1) * 8) /
+                            columns,
+                        child: _DashboardTile(
+                          label: protection.$1,
+                          value: protection.$2 ? 'Active' : 'Needs setup',
+                          icon: protection.$3,
+                          statusIcon:
+                              protection.$2
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.info_outline_rounded,
+                          statusColor:
+                              protection.$2
+                                  ? colors.secondary
+                                  : colors.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
-            _ProtectionLine(
-              icon: Icons.vpn_lock_outlined,
-              label: 'Website filter',
-              enabled: device.vpnFilterEnabled,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeviceSyncCard extends StatelessWidget {
+  const _DeviceSyncCard({required this.device});
+
+  final ChildDevice device;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final details = [
+      ('Device', device.deviceName, Icons.smartphone),
+      ('Platform', device.platform, Icons.android),
+      ('Last sync', DateFormatter.relative(device.lastSyncAt), Icons.sync),
+      (
+        'Last online',
+        DateFormatter.relative(device.lastOnlineAt),
+        device.isOnline ? Icons.wifi : Icons.wifi_off,
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.perm_device_information_outlined,
+                  color: colors.secondary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Device details',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            _ProtectionLine(
-              icon: Icons.sync,
-              label: 'Background sync',
-              enabled: device.backgroundServiceRunning,
-            ),
-            _ProtectionLine(
-              icon: Icons.admin_panel_settings_outlined,
-              label: 'Protected mode',
-              enabled: device.protectedModeEnabled,
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns =
+                    constraints.maxWidth >= 260 &&
+                        MediaQuery.textScalerOf(context).scale(12) <= 18
+                    ? 2
+                    : 1;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final detail in details)
+                      SizedBox(
+                        width:
+                            (constraints.maxWidth - (columns - 1) * 8) /
+                            columns,
+                        child: _DashboardTile(
+                          label: detail.$1,
+                          value: detail.$2,
+                          icon: detail.$3,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -1857,52 +1945,6 @@ class _DeviceProfileCard extends StatelessWidget {
   }
 }
 
-class _DeviceSyncCard extends StatelessWidget {
-  const _DeviceSyncCard({required this.device});
-
-  final ChildDevice device;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Device details',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 14),
-            _InfoLine(
-              icon: Icons.smartphone,
-              label: 'Device',
-              value: device.deviceName,
-            ),
-            _InfoLine(
-              icon: Icons.android,
-              label: 'Platform',
-              value: device.platform,
-            ),
-            _InfoLine(
-              icon: Icons.sync,
-              label: 'Last sync',
-              value: DateFormatter.relative(device.lastSyncAt),
-            ),
-            _InfoLine(
-              icon: device.isOnline ? Icons.wifi : Icons.wifi_off,
-              label: 'Last online',
-              value: DateFormatter.relative(device.lastOnlineAt),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _PairingInfoCard extends StatelessWidget {
   const _PairingInfoCard({required this.device});
@@ -2046,80 +2088,68 @@ class _NeedHelpCard extends StatelessWidget {
   }
 }
 
-class _ProtectionLine extends StatelessWidget {
-  const _ProtectionLine({
-    required this.icon,
-    required this.label,
-    required this.enabled,
-  });
 
-  final IconData icon;
-  final String label;
-  final bool enabled;
 
-  @override
-  Widget build(BuildContext context) {
-    final color = enabled ? AppColors.secondary : AppColors.muted;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          StatusPill(
-            label: enabled ? 'Active' : 'Off',
-            icon: enabled ? Icons.check : Icons.close,
-            color: color,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  const _InfoLine({
-    required this.icon,
+class _DashboardTile extends StatelessWidget {
+  const _DashboardTile({
     required this.label,
     required this.value,
+    required this.icon,
+    this.statusColor,
+    this.statusIcon,
   });
-
-  final IconData icon;
   final String label;
   final String value;
+  final IconData icon;
+  final Color? statusColor;
+  final IconData? statusIcon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(9),
+      ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 20),
-          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: colors.onSurfaceVariant),
+          const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    if (statusIcon != null) ...[
+                      Icon(
+                        statusIcon,
+                        size: 12,
+                        color: statusColor ?? colors.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        value,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: statusColor ?? colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -2215,97 +2245,127 @@ class _ChildAppRuleTile extends StatelessWidget {
     final color = app.isBlocked
         ? AppColors.danger
         : _categoryColor(app.category);
+    final isBlocked = app.isBlocked;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isBlocked ? AppColors.danger.withValues(alpha: 0.04) : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isBlocked ? AppColors.danger.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          if (!isBlocked)
+            BoxShadow(
+              color: AppColors.ink.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // App Icon (Squircle)
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(isBlocked ? Icons.lock : _categoryIcon(app.category), color: color, size: 24),
+          ),
+          const SizedBox(width: 14),
+          // Titles and Minimal Progress
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSizes.radius),
-                  ),
-                  child: Icon(_categoryIcon(app.category), color: color),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
                         app.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        app.packageName,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      hasLimit
+                          ? '${_formatMinutes(app.usageTodayMinutes)} / ${_formatMinutes(app.dailyLimitMinutes)}'
+                          : _formatMinutes(app.usageTodayMinutes),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isBlocked ? AppColors.danger : AppColors.ink.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                if (hasLimit) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 4,
+                      color: progress >= 1 || isBlocked ? AppColors.danger : color,
+                      backgroundColor: isBlocked ? AppColors.danger.withValues(alpha: 0.1) : AppColors.border,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                StatusPill(
-                  label: app.isBlocked ? 'Blocked' : app.category.label,
-                  icon: app.isBlocked ? Icons.lock : Icons.category_outlined,
-                  color: color,
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(999),
-              backgroundColor: AppColors.border,
-              color: color,
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                StatusPill(
-                  label: 'Today ${_formatMinutes(app.usageTodayMinutes)}',
-                  icon: Icons.today,
-                  color: AppColors.primary,
-                ),
-                StatusPill(
-                  label: hasLimit
-                      ? 'Limit ${_formatMinutes(app.dailyLimitMinutes)}'
-                      : 'No daily limit',
-                  icon: Icons.timer_outlined,
-                  color: hasLimit ? AppColors.accent : AppColors.muted,
-                ),
-                StatusPill(
-                  label: hasLimit
-                      ? '${_formatMinutes(app.remainingMinutes)} left'
-                      : 'Open use',
-                  icon: Icons.hourglass_bottom,
-                  color: hasLimit ? AppColors.secondary : AppColors.muted,
-                ),
-                StatusPill(
-                  label: '${app.blockedAttempts} attempts',
-                  icon: Icons.shield_outlined,
-                  color: app.blockedAttempts > 0
-                      ? AppColors.danger
-                      : AppColors.muted,
+                ],
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                      isBlocked ? 'Blocked by parent' : app.category.label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (app.blockedAttempts > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.shield_outlined, size: 10, color: AppColors.danger),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${app.blockedAttempts} blocked',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
