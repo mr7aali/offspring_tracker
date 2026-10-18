@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../../core/constants/app_strings.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/parent_user.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -43,13 +42,6 @@ class AuthController extends ChangeNotifier {
   }) {
     return _runAuthAction(
       () => _registerUseCase(name: name, email: email, password: password),
-    );
-  }
-
-  Future<bool> useDemoAccount() {
-    return login(
-      email: AppStrings.demoEmail,
-      password: AppStrings.demoPassword,
     );
   }
 

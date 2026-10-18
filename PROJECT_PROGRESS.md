@@ -4,13 +4,15 @@ Updated: October 19, 2026
 
 **Backend decision: Supabase has been selected by the project owner. Integration has not started.**
 
+**Product decision: no user-facing demo mode.** Demo authentication buttons, the seeded parent account and child demo-session flag have been removed. Sign-in/registration and code entry are the only authentication paths. Existing sample dashboard records and in-memory storage still need replacement through the tasks below.
+
 Task legend: `[x]` = implemented or explicitly decided within the stated scope; `[ ]` = unfinished. A completed demo task does not mean its production equivalent is complete. Validation results below are from the last implementation run, not a new run for this documentation update.
 
 ## Overall status
 
 **Current stage: functional Flutter demo with native Android installed-app discovery and in-memory data.**
 
-The project supports parent and child navigation, demo authentication, same-session device pairing, local rule management, and native discovery of launchable apps on the child Android phone. Real remote synchronization, usage monitoring and parental-control enforcement are not implemented.
+The project supports parent and child navigation, local authentication, same-session device pairing, local rule management, and native discovery of launchable apps on the child Android phone. Real remote synchronization, usage monitoring and parental-control enforcement are not implemented.
 
 This report is based on repository inspection and checks run during the project review. It distinguishes implemented demo behavior from production functionality. No percentage is assigned because the project does not yet have a weighted delivery plan or acceptance criteria.
 
@@ -19,7 +21,7 @@ This report is based on repository inspection and checks run during the project 
 | Area | Implemented | Remaining work | Status |
 |---|---|---|---|
 | App foundation | Flutter entry point, Material theme, routes, shared widgets, manual dependency injection | Production environment configuration and release setup | Foundation implemented |
-| Parent authentication | Registration, login, validation, demo account, logout | Backend authentication, persistent sessions, secure credential handling, route protection | Local demo |
+| Parent authentication | Registration, login, validation, logout | Backend authentication, persistent sessions, secure credential handling, route protection | Local demo |
 | Child connection | Code-only setup, generated pairing codes, validation, connection confirmation | Cross-device pairing, expiring/single-use invitations, authenticated device sessions | Same-session demo |
 | Parent dashboard | Device selection, overview, app rules, websites, reports, alerts, settings | Account-scoped data, real synchronization and telemetry | Demo implemented |
 | Child dashboard | Device-specific overview, app limits, website rules, alerts and device information | Persistent connection and live device state | Demo implemented |
@@ -60,7 +62,7 @@ Checks performed during the October 19, 2026 review and installed-app implementa
 
 | Check | Result | Notes |
 |---|---|---|
-| `flutter test` | 12 passed | Includes reconciliation, channel failures, lifecycle/package refresh, demo isolation and corrected pairing flow |
+| `flutter test` | 12 passed | Includes reconciliation, channel failures, lifecycle/package refresh, signed-out scan isolation and corrected pairing flow |
 | `flutter analyze` | 4 findings; nonzero exit | 2 warnings and 2 deprecation notices |
 | Website-rule ID reproduction | Bug confirmed | Deleting a newly added rule can also delete another device's rule |
 | Zero-usage report calculation | Fixed | Zero maximum now produces zero progress |
@@ -68,7 +70,7 @@ Checks performed during the October 19, 2026 review and installed-app implementa
 | Native release builds | Not run | Release packaging is not verified |
 | Physical-device monitoring/enforcement | Not tested | Native capabilities are not implemented |
 
-Tests cover role selection, demo parent entry, demo child navigation, invalid child codes and the completed parent-to-child pairing flow. New tests verify inventory reconciliation, rule preservation, device isolation, duplicate handling, removal, empty results, failed scans, category fallback, package events, resume refresh and explicit demo isolation. Native channel responses are mocked in Flutter tests; real Android package events still need physical-device validation.
+Tests cover role selection, registered parent entry, code-based child navigation, invalid child codes and the completed parent-to-child pairing flow. New tests verify inventory reconciliation, rule preservation, device isolation, duplicate handling, removal, empty results, failed scans, category fallback, package events, resume refresh and signed-out scan isolation. Native channel responses are mocked in Flutter tests; real Android package events still need physical-device validation.
 
 ## Installed-app discovery implementation
 
@@ -79,14 +81,14 @@ Tests cover role selection, demo parent entry, demo child navigation, invalid ch
 - The first native scan clears seeded usage values. New apps have zero usage and an unknown last-opened time; app discovery does not provide usage telemetry.
 - Android supplies available categories. Unmapped categories use System for system apps or Other; browser and education categories are not inferred from package-name guesses.
 - Failed scans retain the previous list and display a retry message. Empty successful results clear the device inventory.
-- `Try demo connection` retains seeded data. Unsupported platforms also retain the demo inventory. Parent dashboard navigation alone never scans the parent's phone.
+- All Android child connections use native discovery. Unsupported platforms still retain sample inventory pending backend integration. Parent dashboard navigation alone never scans the parent's phone.
 - App lists and rules remain in memory. A separate parent phone cannot receive the inventory until backend synchronization is implemented.
 
 ### How to try it
 
 1. Install/run the Android build on a test phone.
 2. Generate a pairing code in the parent flow, then sign out in the same app session.
-3. Choose Connect child device, enter that code and continue to the child dashboard. Do not use Try demo connection when testing native discovery.
+3. Choose Connect child device, enter that code and continue to the child dashboard.
 4. Open Apps to inspect the phone's launcher apps. Install/uninstall a test app, then return to Offspring Tracker or tap Refresh child device.
 5. Switch back to the parent flow in the same session to inspect rules for that child device. Restarting the app resets the demo connection and in-memory records.
 
@@ -167,7 +169,8 @@ Supabase is the chosen backend for authentication, persistent records, authoriza
 - [x] Fix zero-usage report bars and stale pairing-test selectors.
 - [ ] Fix website-rule ID collisions and add a cross-device regression test.
 - [ ] Resolve the four existing analyzer findings.
-- [ ] Separate demo and production dependency configurations; production must not seed fake accounts or telemetry.
+- [x] Remove demo authentication buttons, seeded parent login and child demo-session behavior.
+- [ ] Remove remaining runtime sample data and demo wording throughout the application; keep fixtures in tests only.
 - [ ] Split the large child dashboard and reduce coupling between parent dashboard `part` files.
 - [ ] Move support-ticket state from presentation into repository/controller layers.
 - [ ] Separate parent and child data access so child screens do not load platform/admin or other-family data.
@@ -180,7 +183,7 @@ Supabase is the chosen backend for authentication, persistent records, authoriza
 - [ ] Add `supabase_flutter`, initialize it before app startup and configure environment-specific public URL/key values.
 - [ ] Keep privileged keys and billing/push credentials in server-side secrets, never in the APK.
 - [ ] Introduce versioned SQL migrations, repeatable development seed data and backend configuration in the repository.
-- [ ] Add remote repository implementations while retaining explicit demo repositories for previews/tests.
+- [ ] Add remote repository implementations with test doubles confined to automated tests.
 - [ ] Design server-side pairing, inventory reconciliation and privileged account operations.
 - [ ] Define API validation, timeouts, error mapping, pagination, retry behavior and idempotency.
 - [ ] Configure Android release network access and any required authentication deep links.
@@ -218,7 +221,7 @@ Suggested schema below is a design proposal, not an existing database. Finalize 
 
 ### D. Parent authentication and account lifecycle
 
-- [x] Build registration/login forms, input validation, demo login and logout UI.
+- [x] Build registration/login forms, input validation, logout UI.
 - [ ] Replace in-memory password maps with Supabase Auth.
 - [ ] Implement email verification, password recovery and authentication callback handling.
 - [ ] Restore/refresh sessions on startup and handle expiration or revocation.
@@ -233,7 +236,7 @@ Suggested schema below is a design proposal, not an existing database. Finalize 
 
 - [x] Implement code-only child setup without an email/password form.
 - [x] Generate/copy a local pairing code and show connection confirmation.
-- [x] Validate local codes and preserve an explicit demo-connection option.
+- [x] Validate entered local pairing codes.
 - [ ] Choose the device authentication design; evaluate Supabase anonymous auth versus a dedicated device-credential flow.
 - [ ] Generate invitations on the server with expiration, one-time redemption and attempt limits.
 - [ ] Redeem invitations atomically and bind the authenticated device identity to the parent's device record.
@@ -253,7 +256,7 @@ Suggested schema below is a design proposal, not an existing database. Finalize 
 - [x] Reconcile local records by package, preserve retained-app rules and remove absent apps.
 - [x] Clear seeded usage on the first native scan; avoid inventing last-opened timestamps.
 - [x] Retain previous inventory on errors and provide retry feedback.
-- [x] Preserve demo/unsupported-platform behavior and avoid scanning the parent's phone during parent navigation.
+- [x] Avoid scanning the parent's phone during parent navigation.
 - [x] Test reconciliation, duplicate metadata, empty inventories, failures and refresh triggers with mocked channels.
 - [ ] Validate native discovery and package events on physical Android devices and supported OS versions.
 - [ ] Persist inventory locally and upload authenticated snapshots/deltas to Supabase.

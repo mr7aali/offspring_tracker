@@ -270,16 +270,6 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
     ).pushNamedAndRemoveUntil(RouteNames.dashboard, (_) => false);
   }
 
-  Future<void> _useDemoParentAccount() async {
-    final success = await appDependencies.authController.useDemoAccount();
-    if (!mounted || !success) {
-      return;
-    }
-    Navigator.of(
-      context,
-    ).pushNamedAndRemoveUntil(RouteNames.dashboard, (_) => false);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -322,7 +312,6 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
                       setState(() => _obscurePassword = !_obscurePassword);
                     },
                     onSubmit: _submit,
-                    onUseDemoParent: _useDemoParentAccount,
                   ),
                 ],
               ),
@@ -393,7 +382,6 @@ class _AuthFormPanel extends StatelessWidget {
     required this.onModeChanged,
     required this.onObscureChanged,
     required this.onSubmit,
-    required this.onUseDemoParent,
   });
 
   final GlobalKey<FormState> formKey;
@@ -405,7 +393,6 @@ class _AuthFormPanel extends StatelessWidget {
   final ValueChanged<bool> onModeChanged;
   final VoidCallback onObscureChanged;
   final VoidCallback onSubmit;
-  final VoidCallback onUseDemoParent;
 
   @override
   Widget build(BuildContext context) {
@@ -531,12 +518,6 @@ class _AuthFormPanel extends StatelessWidget {
                           )
                         : Icon(isRegisterMode ? Icons.person_add : Icons.login),
                     label: Text(isRegisterMode ? 'Create account' : 'Sign in'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton.icon(
-                    onPressed: isLoading ? null : onUseDemoParent,
-                    icon: const Icon(Icons.play_circle_outline),
-                    label: const Text('Use demo parent'),
                   ),
                 ],
               ),

@@ -1,20 +1,7 @@
-import '../../../../core/constants/app_strings.dart';
 import '../../../../core/errors/failures.dart';
 import '../models/parent_user_model.dart';
 
 class AuthLocalDataSource {
-  AuthLocalDataSource() {
-    final demoUser = ParentUserModel(
-      id: 'parent-demo',
-      name: 'Avery Brooks',
-      email: AppStrings.demoEmail,
-      planName: 'Premium',
-      createdAt: DateTime.now().subtract(const Duration(days: 90)),
-    );
-    _usersByEmail[demoUser.email] = demoUser;
-    _passwordsByEmail[demoUser.email] = AppStrings.demoPassword;
-  }
-
   final Map<String, ParentUserModel> _usersByEmail = {};
   final Map<String, String> _passwordsByEmail = {};
   ParentUserModel? _currentUser;

@@ -34,7 +34,7 @@ Child device setup:
 - Child can view app limits, blocked apps, website rules, and recent alerts
 - Child cannot manage or change parent rules
 
-Current implementation is a frontend demo using existing in-memory data. To preview the full flow, generate a code as a parent, sign out, and connect as a child in the same app session. `Try demo connection` uses the sample Maya device. Cross-phone communication, persistent sessions, single-use/expiring codes, and secure device authentication require a future backend; none are implemented by this UI change.
+Current implementation is a frontend demo using existing in-memory data. To preview the full flow, generate a code as a parent, sign out, and connect as a child in the same app session. Demo authentication shortcuts have been removed; use parent registration and manual code entry. Cross-phone communication, persistent sessions, single-use/expiring codes, and secure device authentication require a future backend; none are implemented by this UI change.
 
 ## 2. Child Device Pairing
 

@@ -79,7 +79,6 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
   String? _inventoryError;
 
   bool get _discoverApps =>
-      !appDependencies.childSessionController.isDemo &&
       appDependencies.refreshInstalledApps.source.isSupported;
 
   @override
@@ -903,7 +902,7 @@ class _ChildDashboardDrawer extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onLogout,
                   icon: const Icon(Icons.logout),
-                  label: const Text('Exit demo connection'),
+                  label: const Text('Sign out'),
                 ),
               ),
             ),

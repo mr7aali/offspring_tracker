@@ -44,7 +44,9 @@ void main() {
     expect(find.text('Child device setup'), findsOneWidget);
   });
 
-  testWidgets('demo parent can open dashboard', (WidgetTester tester) async {
+  testWidgets('registered parent can open dashboard', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const OffspringTrackerApp());
     await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
@@ -55,18 +57,14 @@ void main() {
     await tester.tap(parentButton);
     await tester.pumpAndSettle();
 
-    final demoButton = find.text('Use demo parent');
-    await tester.ensureVisible(demoButton);
-    await tester.pumpAndSettle();
-    await tester.tap(demoButton);
-    await tester.pumpAndSettle();
+    await registerParent(tester);
 
     expect(find.text('Parent dashboard'), findsOneWidget);
     expect(find.text('Maya'), findsWidgets);
     expect(find.text('Pair device'), findsOneWidget);
   });
 
-  testWidgets('demo child can open child dashboard', (
+  testWidgets('child can connect using a code and open dashboard', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const OffspringTrackerApp());
@@ -79,11 +77,9 @@ void main() {
     await tester.tap(childButton);
     await tester.pumpAndSettle();
 
-    final demoButton = find.text('Try demo connection');
-    await tester.ensureVisible(demoButton);
-    await tester.pumpAndSettle();
-    await tester.tap(demoButton);
-    await tester.pumpAndSettle();
+    expect(find.text('Try demo connection'), findsNothing);
+    await tester.enterText(find.byType(TextFormField), 'MAYA7');
+    await tapVisible(tester, 'Connect this device');
 
     expect(find.text('Device connected'), findsOneWidget);
     await tester.tap(find.text('Continue to my device'));
@@ -148,7 +144,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
     await tapVisible(tester, 'Parent sign in');
-    await tapVisible(tester, 'Use demo parent');
+    await registerParent(tester);
     await tapVisible(tester, 'Pair device');
     expect(find.text('Pairing code'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('generate-pairing-code')));
@@ -191,4 +187,22 @@ Future<void> tapVisible(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
+}
+
+Future<void> registerParent(WidgetTester tester) async {
+  expect(find.text('Use demo parent'), findsNothing);
+  await tapVisible(tester, 'Register');
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Parent name'),
+    'Test Parent',
+  );
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Email'),
+    'parent@example.org',
+  );
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Password'),
+    'TestPassword123!',
+  );
+  await tapVisible(tester, 'Create account');
 }

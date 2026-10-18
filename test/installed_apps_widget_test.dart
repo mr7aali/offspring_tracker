@@ -82,17 +82,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('explicit demo connection never scans local apps', (
-    tester,
-  ) async {
-    await appDependencies.childSessionController.connect(
-      pairingCode: 'MAYA7',
-      isDemo: true,
-    );
+  testWidgets('signed-out child does not scan local apps', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: ChildDashboardScreen()));
     await tester.pumpAndSettle();
     expect(scans, 0);
-    expect(appDependencies.dashboardController.apps.length, 4);
+    expect(appDependencies.dashboardController.apps, isEmpty);
     await tester.pumpWidget(const SizedBox());
   });
 }

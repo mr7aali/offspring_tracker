@@ -7,7 +7,7 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../../../shared/widgets/app_logo.dart';
 
-/// Frontend preview. Uses the existing in-memory demo connection only.
+/// Connects a child device using a parent-generated pairing code.
 class ChildPairingScreen extends StatefulWidget {
   const ChildPairingScreen({super.key});
 
@@ -32,16 +32,13 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
     super.dispose();
   }
 
-  Future<void> _connect({bool isDemo = false}) async {
+  Future<void> _connect() async {
     final controller = appDependencies.childSessionController;
     if (controller.isLoading || !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
     FocusScope.of(context).unfocus();
-    final success = await controller.connect(
-      pairingCode: _codeController.text,
-      isDemo: isDemo,
-    );
+    final success = await controller.connect(pairingCode: _codeController.text);
     if (mounted && success) setState(() => _connected = true);
   }
 
@@ -161,18 +158,9 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
                                         : 'Connect this device',
                                   ),
                                 ),
-                                TextButton(
-                                  onPressed: controller.isLoading
-                                      ? null
-                                      : () {
-                                          _codeController.text = 'MAYA7';
-                                          _connect(isDemo: true);
-                                        },
-                                  child: const Text('Try demo connection'),
-                                ),
                                 const SizedBox(height: 12),
                                 const Text(
-                                  'Demo preview: pairing works only within this app session. Connecting separate phones will be available with the live service.',
+                                  'Pairing currently works only within this app session. Cross-phone connections require the upcoming live service.',
                                   style: TextStyle(
                                     color: AppColors.muted,
                                     fontSize: 12,
@@ -220,7 +208,7 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'This is a demo connection. It resets when the app restarts.',
+          'This connection is not saved yet. It resets when the app restarts.',
           style: TextStyle(color: AppColors.muted, fontSize: 12),
         ),
         const SizedBox(height: 24),
