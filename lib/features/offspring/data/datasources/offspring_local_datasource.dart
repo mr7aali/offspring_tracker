@@ -1,5 +1,6 @@
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/admin_snapshot.dart';
+import '../../domain/entities/installed_app.dart';
 import '../../domain/entities/alert_notification.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/subscription_plan.dart';
@@ -19,6 +20,68 @@ class OffspringLocalDataSource {
   final List<WebsiteRuleModel> _websiteRules = [];
   final List<AlertNotificationModel> _notifications = [];
   String _currentPlanId = 'premium';
+  final Set<String> _nativeInventoryDevices = {};
+
+  Future<void> syncInstalledApps(
+    String deviceId,
+    List<InstalledApp> inventory,
+  ) async {
+    if (!_devices.any((device) => device.id == deviceId)) {
+      throw const AppFailure('Device was not found');
+    }
+    final existing = {
+      for (final app in _apps.where((app) => app.deviceId == deviceId))
+        app.packageName: app,
+    };
+    final isFirstScan = !_nativeInventoryDevices.contains(deviceId);
+    final unique = {for (final app in inventory) app.packageName: app};
+    final updated =
+        unique.values.map((app) {
+          final previous = existing[app.packageName];
+          return TrackedAppModel(
+            id: previous?.id ?? 'installed:$deviceId:${app.packageName}',
+            deviceId: deviceId,
+            name: app.name,
+            packageName: app.packageName,
+            category: app.category,
+            isBlocked: previous?.isBlocked ?? false,
+            dailyLimitMinutes: previous?.dailyLimitMinutes ?? 0,
+            // Seeded usage is not telemetry from this phone.
+            usageTodayMinutes: isFirstScan
+                ? 0
+                : previous?.usageTodayMinutes ?? 0,
+            weeklyUsageMinutes: isFirstScan
+                ? 0
+                : previous?.weeklyUsageMinutes ?? 0,
+            blockedAttempts: isFirstScan ? 0 : previous?.blockedAttempts ?? 0,
+            lastOpenedAt: isFirstScan ? null : previous?.lastOpenedAt,
+          );
+        }).toList()..sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+    _apps.removeWhere((app) => app.deviceId == deviceId);
+    _apps.addAll(updated);
+    _nativeInventoryDevices.add(deviceId);
+    // Establish a baseline silently; notify only about later installations.
+    if (!isFirstScan) {
+      for (final app in updated.where(
+        (app) => !existing.containsKey(app.packageName),
+      )) {
+        _notifications.insert(
+          0,
+          AlertNotificationModel(
+            id: 'notification-${_notifications.length + 1}',
+            deviceId: deviceId,
+            title: 'New app installed',
+            message: '${app.name} was detected on this device.',
+            type: AlertType.newApp,
+            createdAt: DateTime.now(),
+            isRead: false,
+          ),
+        );
+      }
+    }
+  }
 
   Future<List<ChildDeviceModel>> getDevices() async {
     return List.unmodifiable(_devices);
@@ -457,7 +520,7 @@ class OffspringLocalDataSource {
   List<TrackedAppModel> _starterAppsFor(String deviceId, DateTime now) {
     return [
       TrackedAppModel(
-        id: 'app-${_apps.length + 1}',
+        id: 'installed:$deviceId:com.android.chrome',
         deviceId: deviceId,
         name: 'Chrome',
         packageName: 'com.android.chrome',
@@ -470,7 +533,7 @@ class OffspringLocalDataSource {
         lastOpenedAt: now,
       ),
       TrackedAppModel(
-        id: 'app-${_apps.length + 2}',
+        id: 'installed:$deviceId:com.google.android.youtube',
         deviceId: deviceId,
         name: 'YouTube',
         packageName: 'com.google.android.youtube',

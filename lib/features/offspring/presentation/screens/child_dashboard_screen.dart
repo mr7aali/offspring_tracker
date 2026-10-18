@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -66,24 +67,93 @@ class ChildDashboardScreen extends StatefulWidget {
   State<ChildDashboardScreen> createState() => _ChildDashboardScreenState();
 }
 
-class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
+class _ChildDashboardScreenState extends State<ChildDashboardScreen>
+    with WidgetsBindingObserver {
   DashboardController get _dashboardController =>
       appDependencies.dashboardController;
 
   ChildDashboardSection _section = ChildDashboardSection.overview;
+  StreamSubscription<void>? _inventorySubscription;
+  bool _refreshing = false;
+  bool _refreshPending = false;
+  String? _inventoryError;
+
+  bool get _discoverApps =>
+      !appDependencies.childSessionController.isDemo &&
+      appDependencies.refreshInstalledApps.source.isSupported;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (_discoverApps) {
+      _inventorySubscription = appDependencies
+          .refreshInstalledApps
+          .source
+          .changes
+          .listen(
+            (_) => _loadChildDevice(),
+            onError: (Object error) {
+              if (mounted) {
+                setState(() {
+                  _inventoryError =
+                      'Automatic app updates are unavailable. Use refresh to try again.';
+                });
+              }
+            },
+          );
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadChildDevice();
+      if (mounted) _loadChildDevice();
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadChildDevice();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inventorySubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _loadChildDevice() async {
+    if (!mounted) return;
+    if (_refreshing) {
+      _refreshPending = true;
+      return;
+    }
     final device = appDependencies.childSessionController.currentDevice;
-    if (device != null) {
-      await _dashboardController.load(selectedDeviceId: device.id);
+    if (device == null) return;
+    setState(() => _refreshing = true);
+    try {
+      do {
+        _refreshPending = false;
+        if (_discoverApps) {
+          try {
+            await appDependencies.refreshInstalledApps(device.id);
+            if (mounted) setState(() => _inventoryError = null);
+          } catch (_) {
+            if (mounted) {
+              setState(() {
+                _inventoryError =
+                    'Could not read installed apps. The previous list is shown. Tap refresh to retry.';
+              });
+            }
+          }
+        }
+        if (!mounted ||
+            appDependencies.childSessionController.currentDevice?.id !=
+                device.id) {
+          return;
+        }
+        await _dashboardController.load(selectedDeviceId: device.id);
+      } while (mounted && _refreshPending);
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
     }
   }
 
@@ -172,7 +242,7 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
                 ),
               IconButton(
                 tooltip: 'Refresh child device',
-                onPressed: _dashboardController.isLoading
+                onPressed: _dashboardController.isLoading || _refreshing
                     ? null
                     : _loadChildDevice,
                 icon: const Icon(Icons.refresh),
@@ -186,38 +256,61 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen> {
               const SizedBox(width: 8),
             ],
           ),
-          body: Stack(
+          body: Column(
             children: [
-              if (isWide)
-                Row(
-                  children: [
-                    _ChildNavigationRail(
-                      section: _section,
-                      onSectionSelected: _showSection,
+              if (_inventoryError != null)
+                MaterialBanner(
+                  content: Text(_inventoryError!),
+                  actions: [
+                    TextButton(
+                      onPressed: _refreshing ? null : _loadChildDevice,
+                      child: const Text('Retry'),
                     ),
-                    const VerticalDivider(width: 1),
-                    Expanded(
-                      child: _ChildDashboardBody(
+                  ],
+                ),
+              if (_discoverApps)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Apps installed on this phone. Usage tracking is not active yet.',
+                  ),
+                ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    if (isWide)
+                      Row(
+                        children: [
+                          _ChildNavigationRail(
+                            section: _section,
+                            onSectionSelected: _showSection,
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _ChildDashboardBody(
+                              data: data,
+                              section: _section,
+                              isWide: isWide,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      _ChildDashboardBody(
                         data: data,
                         section: _section,
                         isWide: isWide,
                       ),
-                    ),
+                    if (_dashboardController.isLoading || _refreshing)
+                      const Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: LinearProgressIndicator(minHeight: 2),
+                      ),
                   ],
-                )
-              else
-                _ChildDashboardBody(
-                  data: data,
-                  section: _section,
-                  isWide: isWide,
                 ),
-              if (_dashboardController.isLoading)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
+              ),
             ],
           ),
           bottomNavigationBar: isWide
@@ -1674,7 +1767,6 @@ class _ChildResponsiveRow extends StatelessWidget {
   }
 }
 
-
 class _ProtectionStatusCard extends StatelessWidget {
   const _ProtectionStatusCard({required this.device});
 
@@ -1766,14 +1858,12 @@ class _ProtectionStatusCard extends StatelessWidget {
                           label: protection.$1,
                           value: protection.$2 ? 'Active' : 'Needs setup',
                           icon: protection.$3,
-                          statusIcon:
-                              protection.$2
-                                  ? Icons.check_circle_outline_rounded
-                                  : Icons.info_outline_rounded,
-                          statusColor:
-                              protection.$2
-                                  ? colors.secondary
-                                  : colors.onSurfaceVariant,
+                          statusIcon: protection.$2
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.info_outline_rounded,
+                          statusColor: protection.$2
+                              ? colors.secondary
+                              : colors.onSurfaceVariant,
                         ),
                       ),
                   ],
@@ -1945,7 +2035,6 @@ class _DeviceProfileCard extends StatelessWidget {
   }
 }
 
-
 class _PairingInfoCard extends StatelessWidget {
   const _PairingInfoCard({required this.device});
 
@@ -2087,8 +2176,6 @@ class _NeedHelpCard extends StatelessWidget {
     );
   }
 }
-
-
 
 class _DashboardTile extends StatelessWidget {
   const _DashboardTile({
@@ -2252,10 +2339,16 @@ class _ChildAppRuleTile extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isBlocked ? AppColors.danger.withValues(alpha: 0.04) : Theme.of(context).colorScheme.surface,
+        color: isBlocked
+            ? AppColors.danger.withValues(alpha: 0.04)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isBlocked ? AppColors.danger.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: isBlocked
+              ? AppColors.danger.withValues(alpha: 0.3)
+              : Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
         boxShadow: [
@@ -2278,7 +2371,11 @@ class _ChildAppRuleTile extends StatelessWidget {
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(isBlocked ? Icons.lock : _categoryIcon(app.category), color: color, size: 24),
+            child: Icon(
+              isBlocked ? Icons.lock : _categoryIcon(app.category),
+              color: color,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 14),
           // Titles and Minimal Progress
@@ -2308,7 +2405,9 @@ class _ChildAppRuleTile extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isBlocked ? AppColors.danger : AppColors.ink.withValues(alpha: 0.8),
+                        color: isBlocked
+                            ? AppColors.danger
+                            : AppColors.ink.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -2320,8 +2419,12 @@ class _ChildAppRuleTile extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 4,
-                      color: progress >= 1 || isBlocked ? AppColors.danger : color,
-                      backgroundColor: isBlocked ? AppColors.danger.withValues(alpha: 0.1) : AppColors.border,
+                      color: progress >= 1 || isBlocked
+                          ? AppColors.danger
+                          : color,
+                      backgroundColor: isBlocked
+                          ? AppColors.danger.withValues(alpha: 0.1)
+                          : AppColors.border,
                     ),
                   ),
                 ],
@@ -2339,7 +2442,10 @@ class _ChildAppRuleTile extends StatelessWidget {
                     const Spacer(),
                     if (app.blockedAttempts > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.danger.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -2347,7 +2453,11 @@ class _ChildAppRuleTile extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.shield_outlined, size: 10, color: AppColors.danger),
+                            const Icon(
+                              Icons.shield_outlined,
+                              size: 10,
+                              color: AppColors.danger,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${app.blockedAttempts} blocked',
@@ -2471,6 +2581,8 @@ Color _categoryColor(AppCategory category) {
       return const Color(0xFF0F766E);
     case AppCategory.system:
       return AppColors.muted;
+    case AppCategory.other:
+      return AppColors.muted;
   }
 }
 
@@ -2490,6 +2602,8 @@ IconData _categoryIcon(AppCategory category) {
       return Icons.task_alt;
     case AppCategory.system:
       return Icons.settings_outlined;
+    case AppCategory.other:
+      return Icons.apps_outlined;
   }
 }
 

@@ -5,6 +5,8 @@ import '../features/auth/domain/usecases/logout_usecase.dart';
 import '../features/auth/domain/usecases/register_usecase.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
 import '../features/offspring/data/datasources/offspring_local_datasource.dart';
+import '../features/offspring/data/datasources/android_installed_apps_source.dart';
+import '../features/offspring/domain/usecases/refresh_installed_apps_usecase.dart';
 import '../features/offspring/data/repositories/offspring_repository_impl.dart';
 import '../features/offspring/domain/usecases/load_dashboard_usecase.dart';
 import '../features/offspring/domain/usecases/connect_child_device_usecase.dart';
@@ -28,6 +30,10 @@ void setupDependencies() {
   final offspringRepository = OffspringRepositoryImpl(offspringDataSource);
 
   appDependencies = AppDependencies(
+    refreshInstalledApps: RefreshInstalledAppsUseCase(
+      AndroidInstalledAppsSource(),
+      offspringRepository,
+    ),
     appMode: Env.appMode,
     notificationService: const NotificationService(),
     authController: AuthController(
@@ -53,6 +59,7 @@ void setupDependencies() {
 
 class AppDependencies {
   const AppDependencies({
+    required this.refreshInstalledApps,
     required this.appMode,
     required this.notificationService,
     required this.authController,
@@ -61,6 +68,7 @@ class AppDependencies {
   });
 
   final String appMode;
+  final RefreshInstalledAppsUseCase refreshInstalledApps;
   final NotificationService notificationService;
   final AuthController authController;
   final ChildSessionController childSessionController;

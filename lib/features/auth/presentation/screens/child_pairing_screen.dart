@@ -32,13 +32,16 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
     super.dispose();
   }
 
-  Future<void> _connect() async {
+  Future<void> _connect({bool isDemo = false}) async {
     final controller = appDependencies.childSessionController;
     if (controller.isLoading || !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
     FocusScope.of(context).unfocus();
-    final success = await controller.connect(pairingCode: _codeController.text);
+    final success = await controller.connect(
+      pairingCode: _codeController.text,
+      isDemo: isDemo,
+    );
     if (mounted && success) setState(() => _connected = true);
   }
 
@@ -163,7 +166,7 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
                                       ? null
                                       : () {
                                           _codeController.text = 'MAYA7';
-                                          _connect();
+                                          _connect(isDemo: true);
                                         },
                                   child: const Text('Try demo connection'),
                                 ),

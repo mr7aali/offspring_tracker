@@ -1,4 +1,5 @@
 import '../../domain/entities/admin_snapshot.dart';
+import '../../domain/entities/installed_app.dart';
 import '../../domain/entities/alert_notification.dart';
 import '../../domain/entities/child_device.dart';
 import '../../domain/entities/dashboard_summary.dart';
@@ -12,6 +13,11 @@ class OffspringRepositoryImpl implements OffspringRepository {
   const OffspringRepositoryImpl(this._localDataSource);
 
   final OffspringLocalDataSource _localDataSource;
+
+  @override
+  Future<void> syncInstalledApps(String deviceId, List<InstalledApp> apps) {
+    return _localDataSource.syncInstalledApps(deviceId, apps);
+  }
 
   @override
   Future<List<ChildDevice>> getDevices() {

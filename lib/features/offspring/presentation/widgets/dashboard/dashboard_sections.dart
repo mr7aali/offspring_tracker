@@ -581,7 +581,7 @@ class _ReportsSection extends StatelessWidget {
                   _UsageBar(
                     label: app.name,
                     valueLabel: _formatMinutes(app.weeklyUsageMinutes),
-                    progress: app.weeklyUsageMinutes / maxWeekly,
+                    progress: maxWeekly == 0 ? 0 : app.weeklyUsageMinutes / maxWeekly,
                     color: _categoryColor(app.category),
                     icon: _categoryIcon(app.category),
                   ),

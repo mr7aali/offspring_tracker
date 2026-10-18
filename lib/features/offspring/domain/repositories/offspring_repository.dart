@@ -1,4 +1,5 @@
 import '../entities/admin_snapshot.dart';
+import '../entities/installed_app.dart';
 import '../entities/alert_notification.dart';
 import '../entities/child_device.dart';
 import '../entities/dashboard_summary.dart';
@@ -16,6 +17,8 @@ abstract class OffspringRepository {
   });
 
   Future<List<TrackedApp>> getApps(String deviceId);
+
+  Future<void> syncInstalledApps(String deviceId, List<InstalledApp> apps);
 
   Future<TrackedApp> updateAppRule({
     required String appId,

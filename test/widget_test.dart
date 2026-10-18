@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:offspring_tracker/app.dart';
 import 'package:offspring_tracker/config/dependency_injection.dart';
 
 void main() {
   setUp(setupDependencies);
+  setUp(() {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('offspring_tracker/installed_apps'),
+      (_) async => [],
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('offspring_tracker/installed_apps/changes'),
+      (_) async => null,
+    );
+  });
+  tearDown(() {
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('offspring_tracker/installed_apps'),
+      null,
+    );
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('offspring_tracker/installed_apps/changes'),
+      null,
+    );
+  });
 
   testWidgets('shows parent auth entry point', (WidgetTester tester) async {
     await tester.pumpWidget(const OffspringTrackerApp());
@@ -126,7 +151,8 @@ void main() {
     await tapVisible(tester, 'Use demo parent');
     await tapVisible(tester, 'Pair device');
     expect(find.text('Pairing code'), findsNothing);
-    await tapVisible(tester, 'Generate pairing code');
+    await tester.tap(find.byKey(const ValueKey('generate-pairing-code')));
+    await tester.pumpAndSettle();
     expect(find.text('Child name is required'), findsOneWidget);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Child name'),
@@ -136,7 +162,8 @@ void main() {
       find.widgetWithText(TextFormField, 'Device name'),
       'Robin phone',
     );
-    await tapVisible(tester, 'Generate pairing code');
+    await tester.tap(find.byKey(const ValueKey('generate-pairing-code')));
+    await tester.pumpAndSettle();
     final code = tester
         .widget<SelectableText>(
           find.byKey(const ValueKey('generated-pairing-code')),
@@ -144,7 +171,7 @@ void main() {
         .data!;
     expect(code, matches(RegExp(r'^[A-Z2-9]{8}$')));
     await tapVisible(tester, 'Done');
-    await tester.tap(find.byTooltip('Account and settings'));
+    await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
     await tapVisible(tester, 'Sign out');
     await tapVisible(tester, 'Connect child device');

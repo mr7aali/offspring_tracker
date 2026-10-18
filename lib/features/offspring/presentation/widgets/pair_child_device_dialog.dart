@@ -195,6 +195,7 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: FilledButton.icon(
+                              key: const ValueKey('generate-pairing-code'),
                               onPressed: _isLoading ? null : _generate,
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),

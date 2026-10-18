@@ -15,13 +15,18 @@ class ChildSessionController extends ChangeNotifier {
   ChildDevice? _currentDevice;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isDemo = false;
+  bool get isDemo => _isDemo;
 
   ChildSessionStatus get status => _status;
   ChildDevice? get currentDevice => _currentDevice;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<bool> connect({required String pairingCode}) async {
+  Future<bool> connect({
+    required String pairingCode,
+    bool isDemo = false,
+  }) async {
     if (_isLoading) return false;
     _isLoading = true;
     _errorMessage = null;
@@ -32,6 +37,7 @@ class ChildSessionController extends ChangeNotifier {
         pairingCode: pairingCode,
       );
       _status = ChildSessionStatus.signedIn;
+      _isDemo = isDemo;
       return true;
     } on AppFailure catch (failure) {
       _errorMessage = failure.message;
@@ -46,6 +52,7 @@ class ChildSessionController extends ChangeNotifier {
   }
 
   void logout() {
+    _isDemo = false;
     _currentDevice = null;
     _status = ChildSessionStatus.signedOut;
     _errorMessage = null;

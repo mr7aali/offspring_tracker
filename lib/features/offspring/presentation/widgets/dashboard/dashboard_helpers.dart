@@ -31,6 +31,8 @@ IconData _categoryIcon(AppCategory category) {
       return Icons.task_alt;
     case AppCategory.system:
       return Icons.settings_outlined;
+    case AppCategory.other:
+      return Icons.apps_outlined;
   }
 }
 
@@ -49,6 +51,8 @@ Color _categoryColor(AppCategory category) {
     case AppCategory.productivity:
       return const Color(0xFF0891B2);
     case AppCategory.system:
+      return AppColors.muted;
+    case AppCategory.other:
       return AppColors.muted;
   }
 }

@@ -6,6 +6,7 @@ enum AppCategory {
   streaming,
   productivity,
   system,
+  other,
 }
 
 extension AppCategoryLabel on AppCategory {
@@ -25,6 +26,8 @@ extension AppCategoryLabel on AppCategory {
         return 'Productivity';
       case AppCategory.system:
         return 'System';
+      case AppCategory.other:
+        return 'Other';
     }
   }
 }
@@ -54,7 +57,7 @@ class TrackedApp {
   final int usageTodayMinutes;
   final int weeklyUsageMinutes;
   final int blockedAttempts;
-  final DateTime lastOpenedAt;
+  final DateTime? lastOpenedAt;
 
   int get remainingMinutes {
     if (dailyLimitMinutes <= 0) {
