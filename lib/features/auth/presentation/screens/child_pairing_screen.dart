@@ -48,7 +48,7 @@ class _ChildPairingScreenState extends State<ChildPairingScreen> {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('Child device setup')),
+        appBar: AppBar(title: const Text('Connect to a parent')),
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(

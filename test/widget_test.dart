@@ -41,7 +41,100 @@ void main() {
     expect(find.text('Offspring Tracker'), findsOneWidget);
     expect(find.text('Choose how you want to continue'), findsOneWidget);
     expect(find.text('Parent access'), findsOneWidget);
-    expect(find.text('Child device setup'), findsOneWidget);
+    expect(find.text('Self mode'), findsOneWidget);
+    expect(find.text('Child device setup'), findsNothing);
+  });
+
+  testWidgets('self mode opens the child dashboard without a code', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const OffspringTrackerApp());
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
+
+    await tapVisible(tester, 'Start self mode');
+    expect(find.text('Hi there'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNothing);
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Connect to a parent'), findsOneWidget);
+    expect(find.text('Need a rule changed?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('self mode can manage app and website rules on this phone', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // Pretend two apps are installed on this phone.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('offspring_tracker/installed_apps'),
+          (_) async => [
+            {
+              'packageName': 'example.notes',
+              'name': 'My Notes',
+              'category': 'productivity',
+            },
+            {
+              'packageName': 'example.game',
+              'name': 'Space Game',
+              'category': 'game',
+            },
+          ],
+        );
+    await tester.pumpWidget(const OffspringTrackerApp());
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'Start self mode');
+
+    // Apps: block/unblock and set a daily limit.
+    await tester.tap(find.text('Apps').last);
+    await tester.pumpAndSettle();
+    int blockedCount() => tester
+        .widgetList<Switch>(find.byType(Switch))
+        .where((toggle) => toggle.value)
+        .length;
+    expect(find.byType(Switch), findsWidgets);
+    final blockedBefore = blockedCount();
+    await tester.tap(find.byType(Switch).first);
+    await tester.pumpAndSettle();
+    expect(blockedCount(), isNot(blockedBefore));
+
+    final setLimit = find.text('Set Limit').first;
+    await tester.ensureVisible(setLimit);
+    await tester.pumpAndSettle();
+    await tester.tap(setLimit);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Daily minutes'),
+      '45',
+    );
+    await tapVisible(tester, 'Save Limit');
+    expect(find.textContaining('45m'), findsWidgets);
+
+    // Sites: add, then remove a blocked domain.
+    await tester.tap(find.text('Sites').last);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, 'Add site');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Domain'),
+      'example.org',
+    );
+    await tapVisible(tester, 'Add Domain');
+    expect(find.text('example.org'), findsOneWidget);
+    final removeButton = find.descendant(
+      of: find.widgetWithText(ListTile, 'example.org'),
+      matching: find.byTooltip('Remove domain'),
+    );
+    await tester.ensureVisible(removeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(removeButton);
+    await tester.pumpAndSettle();
+    expect(find.text('example.org'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('registered parent can open dashboard', (
@@ -71,11 +164,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
 
-    final childButton = find.text('Connect child device');
-    await tester.ensureVisible(childButton);
-    await tester.pumpAndSettle();
-    await tester.tap(childButton);
-    await tester.pumpAndSettle();
+    await openPairingFromSelfMode(tester);
 
     expect(find.text('Try demo connection'), findsNothing);
     await tester.enterText(find.byType(TextFormField), 'MAYA7');
@@ -89,6 +178,8 @@ void main() {
     await tester.tap(find.text('Apps').last);
     await tester.pumpAndSettle();
     expect(find.text('My app rules'), findsOneWidget);
+    // A paired child can only view rules.
+    expect(find.byType(Switch), findsNothing);
 
     await tester.tap(find.text('Sites').last);
     await tester.pumpAndSettle();
@@ -115,7 +206,7 @@ void main() {
     await tester.pumpWidget(const OffspringTrackerApp());
     await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
-    await tapVisible(tester, 'Connect child device');
+    await openPairingFromSelfMode(tester);
     expect(find.byType(TextFormField), findsOneWidget);
     expect(find.text('Email'), findsNothing);
     expect(find.text('Password'), findsNothing);
@@ -170,7 +261,7 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
     await tapVisible(tester, 'Sign out');
-    await tapVisible(tester, 'Connect child device');
+    await openPairingFromSelfMode(tester);
     await tester.enterText(find.byType(TextFormField), code.toLowerCase());
     await tapVisible(tester, 'Connect this device');
     expect(find.text('Device connected'), findsOneWidget);
@@ -187,6 +278,18 @@ Future<void> tapVisible(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
+}
+
+/// Starts self mode from the role screen, then opens the pairing screen
+/// from the child dashboard drawer.
+Future<void> openPairingFromSelfMode(WidgetTester tester) async {
+  await tapVisible(tester, 'Start self mode');
+  expect(find.text('Hi there'), findsOneWidget);
+  expect(find.textContaining('not connected to a parent'), findsOneWidget);
+  await tester.tap(find.byTooltip('Open navigation menu'));
+  await tester.pumpAndSettle();
+  await tapVisible(tester, 'Connect to a parent');
+  expect(find.text('Connect to a parent'), findsOneWidget);
 }
 
 Future<void> registerParent(WidgetTester tester) async {

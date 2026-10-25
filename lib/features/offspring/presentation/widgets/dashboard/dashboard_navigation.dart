@@ -361,7 +361,12 @@ class _DashboardBody extends StatelessWidget {
     final isWide = MediaQuery.sizeOf(context).width >= 900;
     // Increased bottom padding to 140 to ensure bottom nav does not block content
     final pb = isWide ? AppSizes.pagePadding : 140.0;
-    final padding = EdgeInsets.fromLTRB(AppSizes.pagePadding, AppSizes.pagePadding, AppSizes.pagePadding, pb);
+    final padding = EdgeInsets.fromLTRB(
+      AppSizes.pagePadding,
+      AppSizes.pagePadding,
+      AppSizes.pagePadding,
+      pb,
+    );
 
     if (controller.section == DashboardSection.overview) {
       return _OverviewSection(

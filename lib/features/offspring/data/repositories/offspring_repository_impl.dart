@@ -38,6 +38,17 @@ class OffspringRepositoryImpl implements OffspringRepository {
   }
 
   @override
+  Future<ChildDevice> createSelfDevice({
+    required String ownerName,
+    required String deviceName,
+  }) {
+    return _localDataSource.createSelfDevice(
+      ownerName: ownerName,
+      deviceName: deviceName,
+    );
+  }
+
+  @override
   Future<List<TrackedApp>> getApps(String deviceId) {
     return _localDataSource.getApps(deviceId);
   }

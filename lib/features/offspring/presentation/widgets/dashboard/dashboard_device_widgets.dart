@@ -67,15 +67,13 @@ class _ActiveDeviceBanner extends StatelessWidget {
 
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: colors.primary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colors.primary.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -88,7 +86,9 @@ class _ActiveDeviceBanner extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(
-              device.childName.isNotEmpty ? device.childName[0].toUpperCase() : '?',
+              device.childName.isNotEmpty
+                  ? device.childName[0].toUpperCase()
+                  : '?',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: colors.primary,
                 fontWeight: FontWeight.w800,
@@ -296,9 +296,7 @@ class _ProtectionStatusCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: colors.shadow.withValues(alpha: 0.07),
@@ -462,14 +460,12 @@ class _DeviceListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.outlineVariant.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: colors.shadow.withValues(alpha: 0.07),
@@ -499,7 +495,10 @@ class _DeviceListCard extends StatelessWidget {
                 Tooltip(
                   message: '${controller.devices.length} devices connected',
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: colors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
@@ -522,8 +521,7 @@ class _DeviceListCard extends StatelessWidget {
                 isSelected: device.id == controller.selectedDevice?.id,
                 onTap: () => controller.selectDevice(device.id),
               ),
-              if (device != controller.devices.last)
-                const SizedBox(height: 8),
+              if (device != controller.devices.last) const SizedBox(height: 8),
             ],
           ],
         ),
@@ -547,7 +545,7 @@ class _DeviceModernTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -555,13 +553,13 @@ class _DeviceModernTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? colors.primary.withValues(alpha: 0.04) 
+          color: isSelected
+              ? colors.primary.withValues(alpha: 0.04)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected 
-                ? colors.primary.withValues(alpha: 0.3) 
+            color: isSelected
+                ? colors.primary.withValues(alpha: 0.3)
                 : colors.outlineVariant.withValues(alpha: 0.4),
             width: 1,
           ),
@@ -569,7 +567,7 @@ class _DeviceModernTile extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxWidth < 300;
-            
+
             final textContent = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -588,8 +586,12 @@ class _DeviceModernTile extends StatelessWidget {
                     ),
                     if (isSelected) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle_rounded, size: 14, color: colors.primary),
-                    ]
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 14,
+                        color: colors.primary,
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -605,22 +607,28 @@ class _DeviceModernTile extends StatelessWidget {
             );
 
             return Row(
-              crossAxisAlignment: isCompact ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              crossAxisAlignment: isCompact
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
               children: [
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: isSelected 
+                    color: isSelected
                         ? colors.primary.withValues(alpha: 0.12)
                         : colors.onSurface.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Text(
-                      device.childName.isEmpty ? '?' : device.childName[0].toUpperCase(),
+                      device.childName.isEmpty
+                          ? '?'
+                          : device.childName[0].toUpperCase(),
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: isSelected ? colors.primary : colors.onSurfaceVariant,
+                        color: isSelected
+                            ? colors.primary
+                            : colors.onSurfaceVariant,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -628,7 +636,7 @@ class _DeviceModernTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: isCompact 
+                  child: isCompact
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

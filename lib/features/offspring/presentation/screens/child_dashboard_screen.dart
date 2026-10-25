@@ -14,11 +14,13 @@ import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/metric_card.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../../shared/widgets/status_pill.dart';
+import '../../../auth/presentation/screens/child_pairing_screen.dart';
 import '../../domain/entities/alert_notification.dart';
 import '../../domain/entities/child_device.dart';
 import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
+import '../widgets/rule_editor_sheets.dart';
 
 enum ChildDashboardSection { overview, apps, websites, alerts, device }
 
@@ -331,6 +333,7 @@ class _ChildDashboardData {
     required this.websiteRules,
     required this.notifications,
     required this.hasLoadedDevice,
+    required this.canManage,
   });
 
   factory _ChildDashboardData.fromController({
@@ -351,6 +354,7 @@ class _ChildDashboardData {
           .where((notification) => notification.deviceId == device.id)
           .toList(),
       hasLoadedDevice: hasLoadedDevice,
+      canManage: appDependencies.childSessionController.isSelfMode,
     );
   }
 
@@ -359,6 +363,9 @@ class _ChildDashboardData {
   final List<WebsiteRule> websiteRules;
   final List<AlertNotification> notifications;
   final bool hasLoadedDevice;
+
+  /// True in self mode: the user manages this phone's rules themselves.
+  final bool canManage;
 
   int get totalUsageToday {
     return apps.fold<int>(0, (total, app) => total + app.usageTodayMinutes);
@@ -812,6 +819,38 @@ class _ChildDashboardDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  if (appDependencies.childSessionController.isSelfMode)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                      child: Material(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          leading: const Icon(
+                            Icons.link_rounded,
+                            color: AppColors.primary,
+                          ),
+                          title: const Text(
+                            'Connect to a parent',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: const Text(
+                            'Link this phone using a parent pairing code',
+                          ),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const ChildPairingScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   const _ChildDrawerSectionLabel(label: 'Account'),
                   ListTile(
                     leading: const Icon(Icons.person_outline),
@@ -882,16 +921,23 @@ class _ChildDashboardDrawer extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.refresh),
                     title: const Text('Refresh data'),
-                    subtitle: const Text('Sync the latest parent rules'),
+                    subtitle: Text(
+                      appDependencies.childSessionController.isSelfMode
+                          ? 'Rescan the apps on this phone'
+                          : 'Sync the latest parent rules',
+                    ),
                     onTap: onRefresh,
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.help_outline),
-                    title: const Text('Need a rule changed?'),
-                    subtitle: const Text('Ask your parent from Device & help'),
-                    onTap: () =>
-                        onSectionSelected(ChildDashboardSection.device),
-                  ),
+                  if (!appDependencies.childSessionController.isSelfMode)
+                    ListTile(
+                      leading: const Icon(Icons.help_outline),
+                      title: const Text('Need a rule changed?'),
+                      subtitle: const Text(
+                        'Ask your parent from Device & help',
+                      ),
+                      onTap: () =>
+                          onSectionSelected(ChildDashboardSection.device),
+                    ),
                 ],
               ),
             ),
@@ -1359,9 +1405,12 @@ class _ChildOverviewSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: 'Hi, ${device.childName}',
-          subtitle:
-              'This is your child dashboard for ${device.deviceName}. Your parent manages the rules.',
+          title: appDependencies.childSessionController.isSelfMode
+              ? 'Hi there'
+              : 'Hi, ${device.childName}',
+          subtitle: appDependencies.childSessionController.isSelfMode
+              ? 'You are in self mode on ${device.deviceName}. It is not connected to a parent.'
+              : 'This is your child dashboard for ${device.deviceName}. Your parent manages the rules.',
           action: StatusPill(
             label: '${device.enabledProtectionCount}/4 protections',
             icon: Icons.verified_user_outlined,
@@ -1393,7 +1442,7 @@ class _ChildOverviewSection extends StatelessWidget {
               value: '${data.blockedApps}',
               icon: Icons.block,
               color: AppColors.danger,
-              caption: 'Set by parent',
+              caption: data.canManage ? 'Set by you' : 'Set by parent',
             ),
             MetricCard(
               label: 'Alerts',
@@ -1421,10 +1470,12 @@ class _ChildOverviewSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSizes.cardGap),
         if (limitedApps.isEmpty)
-          const EmptyStateWidget(
+          EmptyStateWidget(
             icon: Icons.timer_off_outlined,
             title: 'No daily app limits',
-            message: 'Your parent can add app limits from their dashboard.',
+            message: data.canManage
+                ? 'Open Apps to set a daily limit for any app.'
+                : 'Your parent can add app limits from their dashboard.',
           )
         else
           Column(
@@ -1435,6 +1486,10 @@ class _ChildOverviewSection extends StatelessWidget {
               ],
             ],
           ),
+        if (data.canManage && data.apps.isNotEmpty) ...[
+          const SizedBox(height: AppSizes.sectionGap),
+          _ChildUsageReportCard(apps: data.apps),
+        ],
       ],
     );
   }
@@ -1459,10 +1514,11 @@ class _ChildAppsSection extends StatelessWidget {
       key: const ValueKey('child-apps'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
+        SectionHeader(
           title: 'My app rules',
-          subtitle:
-              'See daily limits, usage, blocked apps, and remaining time for this device.',
+          subtitle: data.canManage
+              ? 'Block apps and set daily limits for this phone.'
+              : 'See daily limits, usage, blocked apps, and remaining time for this device.',
         ),
         const SizedBox(height: AppSizes.sectionGap),
         _ChildMetricGrid(
@@ -1504,7 +1560,18 @@ class _ChildAppsSection extends StatelessWidget {
           Column(
             children: [
               for (final app in apps) ...[
-                _ChildAppRuleTile(app: app),
+                _ChildAppRuleTile(
+                  app: app,
+                  onBlockChanged: data.canManage
+                      ? (value) => _runRuleChange(
+                          context,
+                          () => _rules.toggleAppBlock(app, value),
+                        )
+                      : null,
+                  onLimitTap: data.canManage
+                      ? () => _editAppLimit(context, app)
+                      : null,
+                ),
                 const SizedBox(height: AppSizes.cardGap),
               ],
             ],
@@ -1533,10 +1600,18 @@ class _ChildWebsitesSection extends StatelessWidget {
       key: const ValueKey('child-websites'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
+        SectionHeader(
           title: 'Website rules',
-          subtitle:
-              'Domains your parent has added for website filtering on this device.',
+          subtitle: data.canManage
+              ? 'Block or allow websites on this phone.'
+              : 'Domains your parent has added for website filtering on this device.',
+          action: data.canManage
+              ? FilledButton.icon(
+                  onPressed: () => _addWebsite(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add site'),
+                )
+              : null,
         ),
         const SizedBox(height: AppSizes.sectionGap),
         _ChildMetricGrid(
@@ -1571,16 +1646,32 @@ class _ChildWebsitesSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSizes.sectionGap),
         if (rules.isEmpty)
-          const EmptyStateWidget(
+          EmptyStateWidget(
             icon: Icons.public,
             title: 'No website rules',
-            message: 'Website rules will show here when your parent adds them.',
+            message: data.canManage
+                ? 'Tap Add site to block a website on this phone.'
+                : 'Website rules will show here when your parent adds them.',
           )
         else
           Column(
             children: [
               for (final rule in rules) ...[
-                _ChildWebsiteRuleTile(rule: rule),
+                _ChildWebsiteRuleTile(
+                  rule: rule,
+                  onBlockChanged: data.canManage
+                      ? (value) => _runRuleChange(
+                          context,
+                          () => _rules.toggleWebsiteRule(rule, value),
+                        )
+                      : null,
+                  onDelete: data.canManage
+                      ? () => _runRuleChange(
+                          context,
+                          () => _rules.removeWebsiteRule(rule),
+                        )
+                      : null,
+                ),
                 const SizedBox(height: AppSizes.cardGap),
               ],
             ],
@@ -1604,10 +1695,18 @@ class _ChildAlertsSection extends StatelessWidget {
       key: const ValueKey('child-alerts'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
+        SectionHeader(
           title: 'Recent alerts',
           subtitle:
               'Device events related to limits, blocks, sync, and online status.',
+          action: data.canManage && data.unreadAlerts > 0
+              ? TextButton.icon(
+                  onPressed: () =>
+                      _runRuleChange(context, _rules.markNotificationsRead),
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('Mark all read'),
+                )
+              : null,
         ),
         const SizedBox(height: AppSizes.sectionGap),
         _ChildMetricGrid(
@@ -1691,7 +1790,7 @@ class _ChildDeviceSection extends StatelessWidget {
         _ChildResponsiveRow(
           children: [
             _ProtectionStatusCard(device: device),
-            _PairingInfoCard(device: device),
+            _PairingInfoCard(device: device, isSelfMode: data.canManage),
           ],
         ),
         const SizedBox(height: AppSizes.sectionGap),
@@ -2035,12 +2134,14 @@ class _DeviceProfileCard extends StatelessWidget {
 }
 
 class _PairingInfoCard extends StatelessWidget {
-  const _PairingInfoCard({required this.device});
+  const _PairingInfoCard({required this.device, required this.isSelfMode});
 
   final ChildDevice device;
+  final bool isSelfMode;
 
   @override
   Widget build(BuildContext context) {
+    if (isSelfMode) return const _SelfModeConnectionCard();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -2131,13 +2232,17 @@ class _NeedHelpCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Need a rule changed?',
+                        appDependencies.childSessionController.isSelfMode
+                            ? 'Not connected to a parent'
+                            : 'Need a rule changed?',
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'This child role is view-only. Ask your parent to update app limits, unblock apps, or change website rules from the parent dashboard.',
+                        appDependencies.childSessionController.isSelfMode
+                            ? 'You manage this phone yourself: block apps and set limits in Apps, and block websites in Sites. Choose Connect to a parent in the menu if you want a parent to manage it.'
+                            : 'This child role is view-only. Ask your parent to update app limits, unblock apps, or change website rules from the parent dashboard.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.muted,
                         ),
@@ -2318,9 +2423,19 @@ class _CompactLimitTile extends StatelessWidget {
 }
 
 class _ChildAppRuleTile extends StatelessWidget {
-  const _ChildAppRuleTile({required this.app});
+  const _ChildAppRuleTile({
+    required this.app,
+    this.onBlockChanged,
+    this.onLimitTap,
+  });
 
   final TrackedApp app;
+
+  /// Set in self mode, where the user manages their own rules.
+  final ValueChanged<bool>? onBlockChanged;
+  final VoidCallback? onLimitTap;
+
+  bool get _canManage => onBlockChanged != null;
 
   @override
   Widget build(BuildContext context) {
@@ -2430,15 +2545,23 @@ class _ChildAppRuleTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Text(
-                      isBlocked ? 'Blocked by parent' : app.category.label,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        isBlocked
+                            ? (_canManage ? 'Blocked' : 'Blocked by parent')
+                            : app.category.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const Spacer(),
+                    if (onLimitTap != null)
+                      _LimitLink(hasLimit: hasLimit, onTap: onLimitTap!),
                     if (app.blockedAttempts > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -2474,16 +2597,66 @@ class _ChildAppRuleTile extends StatelessWidget {
               ],
             ),
           ),
+          if (onBlockChanged != null) ...[
+            const SizedBox(width: 8),
+            Switch(
+              value: isBlocked,
+              onChanged: onBlockChanged,
+              activeThumbColor: AppColors.danger,
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
+class _LimitLink extends StatelessWidget {
+  const _LimitLink({required this.hasLimit, required this.onTap});
+
+  final bool hasLimit;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = hasLimit ? AppColors.secondary : AppColors.primary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.timer_outlined, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              hasLimit ? 'Edit Limit' : 'Set Limit',
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ChildWebsiteRuleTile extends StatelessWidget {
-  const _ChildWebsiteRuleTile({required this.rule});
+  const _ChildWebsiteRuleTile({
+    required this.rule,
+    this.onBlockChanged,
+    this.onDelete,
+  });
 
   final WebsiteRule rule;
+
+  /// Set in self mode, where the user manages their own rules.
+  final ValueChanged<bool>? onBlockChanged;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -2501,11 +2674,28 @@ class _ChildWebsiteRuleTile extends StatelessWidget {
         subtitle: Text(
           rule.includesSubdomains ? 'Includes subdomains' : 'Exact domain only',
         ),
-        trailing: StatusPill(
-          label: rule.isBlocked ? 'Blocked' : 'Allowed',
-          icon: rule.isBlocked ? Icons.lock : Icons.lock_open,
-          color: color,
-        ),
+        trailing: onBlockChanged == null
+            ? StatusPill(
+                label: rule.isBlocked ? 'Blocked' : 'Allowed',
+                icon: rule.isBlocked ? Icons.lock : Icons.lock_open,
+                color: color,
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Switch(
+                    value: rule.isBlocked,
+                    onChanged: onBlockChanged,
+                    activeThumbColor: AppColors.danger,
+                  ),
+                  IconButton(
+                    tooltip: 'Remove domain',
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    color: AppColors.muted,
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -2536,6 +2726,179 @@ class _ChildAlertTile extends StatelessWidget {
             color: AppColors.muted,
             fontWeight: FontWeight.w700,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Self mode: rule editing for this phone
+// ---------------------------------------------------------------------------
+
+DashboardController get _rules => appDependencies.dashboardController;
+
+/// Saves a rule change and shows a message if it fails.
+Future<void> _runRuleChange(
+  BuildContext context,
+  Future<void> Function() change,
+) async {
+  if (_rules.isLoading) return;
+  final messenger = ScaffoldMessenger.of(context);
+  await change();
+  final error = _rules.errorMessage;
+  if (error != null) {
+    messenger.showSnackBar(SnackBar(content: Text(error)));
+  }
+}
+
+Future<void> _editAppLimit(BuildContext context, TrackedApp app) async {
+  final minutes = await showAppLimitSheet(
+    context,
+    app: app,
+    icon: _categoryIcon(app.category),
+    color: _categoryColor(app.category),
+  );
+  if (minutes == null || !context.mounted) return;
+  await _runRuleChange(context, () => _rules.updateAppLimit(app, minutes));
+}
+
+Future<void> _addWebsite(BuildContext context) async {
+  final draft = await showAddWebsiteSheet(context);
+  if (draft == null || !context.mounted) return;
+  await _runRuleChange(
+    context,
+    () => _rules.addWebsiteRule(
+      domain: draft.domain,
+      includesSubdomains: draft.includesSubdomains,
+    ),
+  );
+}
+
+/// Weekly usage by app, shown on the self-mode overview.
+class _ChildUsageReportCard extends StatelessWidget {
+  const _ChildUsageReportCard({required this.apps});
+
+  final List<TrackedApp> apps;
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...apps]
+      ..sort((a, b) => b.weeklyUsageMinutes.compareTo(a.weeklyUsageMinutes));
+    final top = sorted.take(6).toList();
+    final maxWeekly = top.isEmpty ? 0 : top.first.weeklyUsageMinutes;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Usage report',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              maxWeekly == 0
+                  ? 'No usage recorded this week yet.'
+                  : 'Most used this week: ${top.first.name}',
+              style: textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+            ),
+            const SizedBox(height: 16),
+            for (final app in top) ...[
+              Row(
+                children: [
+                  Icon(
+                    _categoryIcon(app.category),
+                    size: 18,
+                    color: _categoryColor(app.category),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      app.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatMinutes(app.weeklyUsageMinutes),
+                    style: textTheme.labelMedium?.copyWith(
+                      color: AppColors.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: maxWeekly == 0 ? 0 : app.weeklyUsageMinutes / maxWeekly,
+                minHeight: 6,
+                borderRadius: BorderRadius.circular(999),
+                backgroundColor: AppColors.border,
+                color: _categoryColor(app.category),
+              ),
+              const SizedBox(height: 14),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Device & help card shown in self mode instead of the parent pairing card.
+class _SelfModeConnectionCard extends StatelessWidget {
+  const _SelfModeConnectionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Parent connection',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const StatusPill(
+                  label: 'Self mode',
+                  icon: Icons.link_off,
+                  color: AppColors.muted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You manage the rules on this phone. Connect to a parent if you want them to manage it instead.',
+              style: textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ChildPairingScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.link_rounded),
+              label: const Text('Connect to a parent'),
+            ),
+          ],
         ),
       ),
     );

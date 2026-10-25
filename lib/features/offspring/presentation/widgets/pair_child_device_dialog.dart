@@ -114,7 +114,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _code == null ? 'Connect a child phone' : 'Your pairing code',
+                      _code == null
+                          ? 'Connect a child phone'
+                          : 'Your pairing code',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink,
@@ -124,7 +126,7 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               if (_code == null)
                 Form(
                   key: _formKey,
@@ -148,7 +150,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                          fillColor: colors.surfaceContainerHighest.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         validator: (value) =>
                             Validators.requiredText(value, 'Child name'),
@@ -166,7 +170,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+                          fillColor: colors.surfaceContainerHighest.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                         validator: (value) =>
                             Validators.requiredText(value, 'Device name'),
@@ -189,7 +195,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.of(context).pop(),
                             child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 8),
@@ -198,7 +206,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                               key: const ValueKey('generate-pairing-code'),
                               onPressed: _isLoading ? null : _generate,
                               style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -207,12 +217,17 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                                   ? const SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : const Icon(Icons.link),
                               label: Text(
                                 _isLoading ? 'Generating…' : 'Generate code',
-                                style: const TextStyle(fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
@@ -236,7 +251,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                       decoration: BoxDecoration(
                         color: colors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: colors.primary.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: SelectableText(
                         _code!,
@@ -260,7 +277,9 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Could not copy. Select the code to copy it manually.'),
+                                content: Text(
+                                  'Could not copy. Select the code to copy it manually.',
+                                ),
                               ),
                             );
                           }
@@ -297,7 +316,10 @@ class _PairChildDeviceDialogState extends State<PairChildDeviceDialog> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ],
                 ),

@@ -21,6 +21,7 @@ import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/pair_child_device_dialog.dart';
+import '../widgets/rule_editor_sheets.dart';
 
 part '../widgets/dashboard/dashboard_drawer.dart';
 part '../widgets/dashboard/dashboard_navigation.dart';
@@ -84,7 +85,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(1.0),
               child: Container(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.3),
                 height: 1.0,
               ),
             ),
@@ -128,7 +131,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.only(right: 12),
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -144,7 +150,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.auto_awesome_rounded, size: 14, color: AppColors.accent),
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: AppColors.accent,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '${summary.currentPlanName} Plan',
@@ -174,9 +184,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.08),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.2),
                             ),
                           ),
                           child: Icon(

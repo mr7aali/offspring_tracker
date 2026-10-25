@@ -10,16 +10,20 @@ class _NotificationCard extends StatelessWidget {
     final color = _alertColor(notification.type);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: !notification.isRead ? color.withValues(alpha: 0.04) : colors.surface,
+        color: !notification.isRead
+            ? color.withValues(alpha: 0.04)
+            : colors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: !notification.isRead ? color.withValues(alpha: 0.3) : colors.outlineVariant.withValues(alpha: 0.5),
+          color: !notification.isRead
+              ? color.withValues(alpha: 0.3)
+              : colors.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
         boxShadow: [
@@ -64,7 +68,10 @@ class _NotificationCard extends StatelessWidget {
                     if (!notification.isRead) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),

@@ -16,7 +16,9 @@ class _AppRuleCard extends StatelessWidget {
     final progress = app.hasLimit
         ? (app.usageTodayMinutes / app.dailyLimitMinutes).clamp(0.0, 1.0)
         : 0.0;
-    final color = app.isBlocked ? AppColors.danger : _categoryColor(app.category);
+    final color = app.isBlocked
+        ? AppColors.danger
+        : _categoryColor(app.category);
     final isBlocked = app.isBlocked;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
@@ -26,10 +28,16 @@ class _AppRuleCard extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isBlocked ? AppColors.danger.withValues(alpha: 0.04) : Theme.of(context).colorScheme.surface,
+        color: isBlocked
+            ? AppColors.danger.withValues(alpha: 0.04)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isBlocked ? AppColors.danger.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: isBlocked
+              ? AppColors.danger.withValues(alpha: 0.3)
+              : Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
         boxShadow: [
@@ -82,7 +90,9 @@ class _AppRuleCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isBlocked ? AppColors.danger : AppColors.ink.withValues(alpha: 0.8),
+                        color: isBlocked
+                            ? AppColors.danger
+                            : AppColors.ink.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -94,8 +104,12 @@ class _AppRuleCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 4,
-                      color: progress >= 1 || isBlocked ? AppColors.danger : color,
-                      backgroundColor: isBlocked ? AppColors.danger.withValues(alpha: 0.1) : AppColors.border,
+                      color: progress >= 1 || isBlocked
+                          ? AppColors.danger
+                          : color,
+                      backgroundColor: isBlocked
+                          ? AppColors.danger.withValues(alpha: 0.1)
+                          : AppColors.border,
                     ),
                   ),
                 ],
@@ -115,21 +129,28 @@ class _AppRuleCard extends StatelessWidget {
                       onTap: onLimitTap,
                       borderRadius: BorderRadius.circular(4),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.timer_outlined,
                               size: 14,
-                              color: app.hasLimit ? AppColors.secondary : AppColors.primary,
+                              color: app.hasLimit
+                                  ? AppColors.secondary
+                                  : AppColors.primary,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               app.hasLimit ? 'Edit Limit' : 'Set Limit',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: app.hasLimit ? AppColors.secondary : AppColors.primary,
+                                color: app.hasLimit
+                                    ? AppColors.secondary
+                                    : AppColors.primary,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -176,10 +197,16 @@ class _WebsiteRuleCard extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isBlocked ? AppColors.danger.withValues(alpha: 0.04) : Theme.of(context).colorScheme.surface,
+        color: isBlocked
+            ? AppColors.danger.withValues(alpha: 0.04)
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isBlocked ? AppColors.danger.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: isBlocked
+              ? AppColors.danger.withValues(alpha: 0.3)
+              : Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 1,
         ),
         boxShadow: [
@@ -228,7 +255,11 @@ class _WebsiteRuleCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Row(
                         children: [
-                          Icon(Icons.warning_amber, size: 14, color: AppColors.accent),
+                          Icon(
+                            Icons.warning_amber,
+                            size: 14,
+                            color: AppColors.accent,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             '${rule.blockedAttempts}',
@@ -245,7 +276,9 @@ class _WebsiteRuleCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  rule.includesSubdomains ? 'Includes subdomains' : 'Exact domain only',
+                  rule.includesSubdomains
+                      ? 'Includes subdomains'
+                      : 'Exact domain only',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.muted,
@@ -319,9 +352,9 @@ class _UsageBar extends StatelessWidget {
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
             Text(

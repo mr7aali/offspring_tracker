@@ -7,7 +7,6 @@ import '../../../../core/constants/app_strings.dart';
 import '../../../../core/routes/route_names.dart';
 import '../../../../core/utils/validators.dart';
 import '../widgets/auth_widgets.dart';
-import 'child_pairing_screen.dart';
 
 /// Layouts switch to a two-column design from this width.
 const double _wideBreakpoint = 900;
@@ -30,39 +29,41 @@ const List<AuthFeature> _parentFeatures = [
   ),
 ];
 
-enum _LoginRole { parent, child }
+/// The two ways to enter the app. Self mode uses the child dashboard for
+/// this phone without linking it to a parent.
+enum _LoginRole { parent, self }
 
 extension _LoginRoleUi on _LoginRole {
   String get headline => switch (this) {
     _LoginRole.parent => 'Parent access',
-    _LoginRole.child => 'Child device setup',
+    _LoginRole.self => 'Self mode',
   };
 
   String get subtitle => switch (this) {
     _LoginRole.parent =>
       'Manage child devices, rules, reports, alerts, and account settings.',
-    _LoginRole.child =>
-      'Connect this phone to a parent using a pairing code. No child account needed.',
+    _LoginRole.self =>
+      'Use the app on this phone on its own, without a parent. No account or pairing code needed.',
   };
 
   String get actionLabel => switch (this) {
     _LoginRole.parent => 'Parent sign in',
-    _LoginRole.child => 'Connect child device',
+    _LoginRole.self => 'Start self mode',
   };
 
   IconData get icon => switch (this) {
     _LoginRole.parent => Icons.family_restroom_rounded,
-    _LoginRole.child => Icons.phone_android_rounded,
+    _LoginRole.self => Icons.smartphone_rounded,
   };
 
   Color get color => switch (this) {
     _LoginRole.parent => AppColors.primary,
-    _LoginRole.child => AppColors.secondary,
+    _LoginRole.self => AppColors.secondary,
   };
 
   LinearGradient get gradient => switch (this) {
     _LoginRole.parent => AuthPalette.parent,
-    _LoginRole.child => AuthPalette.child,
+    _LoginRole.self => AuthPalette.child,
   };
 
   List<(IconData, String)> get highlights => switch (this) {
@@ -71,12 +72,29 @@ extension _LoginRoleUi on _LoginRole {
       (Icons.language_rounded, 'Website rules'),
       (Icons.insights_rounded, 'Reports'),
     ],
-    _LoginRole.child => const [
-      (Icons.dialpad_rounded, 'Code only'),
+    _LoginRole.self => const [
+      (Icons.smartphone_rounded, 'This phone'),
       (Icons.no_accounts_outlined, 'No account'),
-      (Icons.bolt_rounded, 'Quick setup'),
+      (Icons.link_off_rounded, 'No parent needed'),
     ],
   };
+}
+
+/// Opens the child dashboard for this phone in self mode.
+Future<void> _startSelfMode(BuildContext context) async {
+  final navigator = Navigator.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final controller = appDependencies.childSessionController;
+  final started = await controller.startSelfMode();
+  if (started) {
+    navigator.pushNamedAndRemoveUntil(RouteNames.childDashboard, (_) => false);
+  } else {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(controller.errorMessage ?? 'Unable to start self mode.'),
+      ),
+    );
+  }
 }
 
 void _clearAuthErrors() {
@@ -92,12 +110,12 @@ class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
 
   void _openRole(BuildContext context, _LoginRole role) {
+    if (role == _LoginRole.self) {
+      _startSelfMode(context);
+      return;
+    }
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => role == _LoginRole.child
-            ? const ChildPairingScreen()
-            : const _RoleAuthScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (context) => const _RoleAuthScreen()),
     );
   }
 
@@ -223,7 +241,7 @@ class _RoleHero extends StatelessWidget {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: Text(
-                        'Parents sign in to manage their family. Child phones connect with a pairing code.',
+                        'Parents sign in to manage their family. Use self mode to manage this phone on its own.',
                         textAlign: TextAlign.center,
                         style: textTheme.bodyMedium?.copyWith(
                           color: Colors.white.withValues(alpha: 0.8),
@@ -265,7 +283,7 @@ class _RoleChoices extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Parents sign in to manage their family. Child phones connect with a pairing code.',
+            'Parents sign in to manage their family. Use self mode to manage this phone on its own.',
             style: textTheme.bodyLarge?.copyWith(
               color: AppColors.muted,
               height: 1.45,
@@ -284,8 +302,8 @@ class _RoleChoices extends StatelessWidget {
         AuthEntrance(
           delay: const Duration(milliseconds: 280),
           child: _RoleChoiceCard(
-            role: _LoginRole.child,
-            onTap: () => onOpen(_LoginRole.child),
+            role: _LoginRole.self,
+            onTap: () => onOpen(_LoginRole.self),
           ),
         ),
         const SizedBox(height: 24),
@@ -298,11 +316,11 @@ class _RoleChoices extends StatelessWidget {
             children: [
               _FootNote(
                 icon: Icons.verified_user_outlined,
-                label: 'Parents set every rule',
+                label: 'Parents manage child devices',
               ),
               _FootNote(
                 icon: Icons.child_care_outlined,
-                label: 'No child account needed',
+                label: 'Self mode needs no account',
               ),
             ],
           ),
@@ -508,11 +526,13 @@ class _FootNote extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: AppColors.muted),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+        Flexible(
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+          ),
         ),
       ],
     );
@@ -554,11 +574,9 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
     appDependencies.authController.clearError();
   }
 
-  void _openChildSetup() {
-    _clearAuthErrors();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const ChildPairingScreen()),
-    );
+  void _openSelfMode() {
+    appDependencies.authController.clearError();
+    _startSelfMode(context);
   }
 
   Future<void> _submit() async {
@@ -650,7 +668,7 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
                                     children: [
                                       _buildForm(showTitle: true),
                                       const SizedBox(height: 12),
-                                      _ChildSetupLink(onTap: _openChildSetup),
+                                      _SelfModeLink(onTap: _openSelfMode),
                                     ],
                                   ),
                                 ),
@@ -699,7 +717,7 @@ class _RoleAuthScreenState extends State<_RoleAuthScreen> {
                                   child: _buildForm(showTitle: false),
                                 ),
                                 const SizedBox(height: 12),
-                                _ChildSetupLink(onTap: _openChildSetup),
+                                _SelfModeLink(onTap: _openSelfMode),
                               ],
                             ),
                           ),
@@ -1318,8 +1336,8 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-class _ChildSetupLink extends StatelessWidget {
-  const _ChildSetupLink({required this.onTap});
+class _SelfModeLink extends StatelessWidget {
+  const _SelfModeLink({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -1329,8 +1347,8 @@ class _ChildSetupLink extends StatelessWidget {
       child: TextButton.icon(
         onPressed: onTap,
         style: TextButton.styleFrom(foregroundColor: AppColors.muted),
-        icon: const Icon(Icons.phone_android_rounded, size: 18),
-        label: const Text("Setting up a child's phone instead?"),
+        icon: const Icon(Icons.smartphone_rounded, size: 18),
+        label: const Text('Use this phone in self mode instead'),
       ),
     );
   }

@@ -13,6 +13,7 @@ import '../features/offspring/domain/usecases/connect_child_device_usecase.dart'
 import '../features/offspring/domain/usecases/manage_notifications_usecase.dart';
 import '../features/offspring/domain/usecases/manage_subscription_usecase.dart';
 import '../features/offspring/domain/usecases/pair_child_device_usecase.dart';
+import '../features/offspring/domain/usecases/start_self_mode_usecase.dart';
 import '../features/offspring/domain/usecases/update_app_rule_usecase.dart';
 import '../features/offspring/domain/usecases/update_website_rule_usecase.dart';
 import '../features/offspring/presentation/controllers/child_session_controller.dart';
@@ -43,6 +44,7 @@ void setupDependencies() {
     ),
     childSessionController: ChildSessionController(
       ConnectChildDeviceUseCase(offspringRepository),
+      StartSelfModeUseCase(offspringRepository),
     ),
     dashboardController: DashboardController(
       LoadDashboardUseCase(offspringRepository),

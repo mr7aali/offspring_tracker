@@ -2,17 +2,21 @@ part of '../../screens/dashboard_screen.dart';
 
 class _StickyPairDeviceDelegate extends SliverPersistentHeaderDelegate {
   _StickyPairDeviceDelegate({required this.controller, required this.padding});
-  
+
   final DashboardController controller;
   final EdgeInsets padding;
-  
+
   @override
-  double get minExtent => 88.0; 
+  double get minExtent => 88.0;
   @override
   double get maxExtent => 88.0;
-  
+
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final colors = Theme.of(context).colorScheme;
     return Container(
       color: Colors.transparent, // Transparent to act like a floating button
@@ -24,7 +28,9 @@ class _StickyPairDeviceDelegate extends SliverPersistentHeaderDelegate {
             padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
             child: Material(
               elevation: overlapsContent ? 12 : 4,
-              shadowColor: colors.primary.withValues(alpha: overlapsContent ? 0.5 : 0.35),
+              shadowColor: colors.primary.withValues(
+                alpha: overlapsContent ? 0.5 : 0.35,
+              ),
               borderRadius: BorderRadius.circular(14),
               clipBehavior: Clip.antiAlias,
               child: Ink(
@@ -73,17 +79,21 @@ class _StickyPairDeviceDelegate extends SliverPersistentHeaderDelegate {
 
 class _StickyAddDomainDelegate extends SliverPersistentHeaderDelegate {
   _StickyAddDomainDelegate({required this.controller, required this.padding});
-  
+
   final DashboardController controller;
   final EdgeInsets padding;
-  
+
   @override
-  double get minExtent => 88.0; 
+  double get minExtent => 88.0;
   @override
   double get maxExtent => 88.0;
-  
+
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final colors = Theme.of(context).colorScheme;
     return Container(
       color: Colors.transparent, // Transparent to act like a floating button
@@ -95,7 +105,9 @@ class _StickyAddDomainDelegate extends SliverPersistentHeaderDelegate {
             padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
             child: Material(
               elevation: overlapsContent ? 12 : 4,
-              shadowColor: colors.primary.withValues(alpha: overlapsContent ? 0.5 : 0.35),
+              shadowColor: colors.primary.withValues(
+                alpha: overlapsContent ? 0.5 : 0.35,
+              ),
               borderRadius: BorderRadius.circular(14),
               clipBehavior: Clip.antiAlias,
               child: Ink(
@@ -145,7 +157,11 @@ class _StickyAddDomainDelegate extends SliverPersistentHeaderDelegate {
 }
 
 class _OverviewSection extends StatelessWidget {
-  const _OverviewSection({super.key, required this.controller, required this.padding});
+  const _OverviewSection({
+    super.key,
+    required this.controller,
+    required this.padding,
+  });
 
   final DashboardController controller;
   final EdgeInsets padding;
@@ -174,7 +190,8 @@ class _OverviewSection extends StatelessWidget {
                     ],
                     const SectionHeader(
                       title: 'Parent dashboard',
-                      subtitle: 'Manage child devices, remote rules, protection status, and reports.',
+                      subtitle:
+                          'Manage child devices, remote rules, protection status, and reports.',
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -185,7 +202,10 @@ class _OverviewSection extends StatelessWidget {
         ),
         SliverPersistentHeader(
           pinned: true,
-          delegate: _StickyPairDeviceDelegate(controller: controller, padding: padding),
+          delegate: _StickyPairDeviceDelegate(
+            controller: controller,
+            padding: padding,
+          ),
         ),
         SliverToBoxAdapter(
           child: Padding(
@@ -210,7 +230,9 @@ class _OverviewSection extends StatelessWidget {
                         MetricCard(
                           label: 'Screen usage today',
                           showShadow: true,
-                          value: _formatMinutes(summary?.totalUsageTodayMinutes ?? 0),
+                          value: _formatMinutes(
+                            summary?.totalUsageTodayMinutes ?? 0,
+                          ),
                           icon: Icons.timelapse,
                           color: AppColors.secondary,
                           caption: 'All devices',
@@ -238,9 +260,11 @@ class _OverviewSection extends StatelessWidget {
                       EmptyStateWidget(
                         icon: Icons.devices_other,
                         title: 'No devices paired',
-                        message: 'Pair a child Android device to start monitoring apps.',
+                        message:
+                            'Pair a child Android device to start monitoring apps.',
                         action: FilledButton.icon(
-                          onPressed: () => _showPairDeviceDialog(context, controller),
+                          onPressed: () =>
+                              _showPairDeviceDialog(context, controller),
                           icon: const Icon(Icons.qr_code_scanner),
                           label: const Text('Pair device'),
                         ),
@@ -249,7 +273,8 @@ class _OverviewSection extends StatelessWidget {
                       _ActiveDeviceBanner(
                         controller: controller,
                         compact: true,
-                        message: 'Overview, rules, and reports use this active device.',
+                        message:
+                            'Overview, rules, and reports use this active device.',
                       ),
                       const SizedBox(height: AppSizes.sectionGap),
                       LayoutBuilder(
@@ -352,7 +377,11 @@ class _AppsSection extends StatelessWidget {
 }
 
 class _WebsitesSection extends StatelessWidget {
-  const _WebsitesSection({super.key, required this.controller, required this.padding});
+  const _WebsitesSection({
+    super.key,
+    required this.controller,
+    required this.padding,
+  });
 
   final DashboardController controller;
   final EdgeInsets padding;
@@ -376,7 +405,8 @@ class _WebsitesSection extends StatelessWidget {
                     ],
                     const SectionHeader(
                       title: 'Website and domain blocking',
-                      subtitle: 'Block domains, include subdomains, and sync filtering rules remotely.',
+                      subtitle:
+                          'Block domains, include subdomains, and sync filtering rules remotely.',
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -387,7 +417,10 @@ class _WebsitesSection extends StatelessWidget {
         ),
         SliverPersistentHeader(
           pinned: true,
-          delegate: _StickyAddDomainDelegate(controller: controller, padding: padding),
+          delegate: _StickyAddDomainDelegate(
+            controller: controller,
+            padding: padding,
+          ),
         ),
         SliverToBoxAdapter(
           child: Padding(
@@ -403,7 +436,8 @@ class _WebsitesSection extends StatelessWidget {
                       const EmptyStateWidget(
                         icon: Icons.public_off,
                         title: 'No selected device',
-                        message: 'Pair and select a device to manage domain rules.',
+                        message:
+                            'Pair and select a device to manage domain rules.',
                       )
                     else if (controller.websiteRules.isEmpty)
                       Container(
@@ -413,7 +447,9 @@ class _WebsitesSection extends StatelessWidget {
                           color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                           ),
                         ),
                         child: Column(
@@ -426,23 +462,30 @@ class _WebsitesSection extends StatelessWidget {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 32,
+                              ),
                               child: Column(
                                 children: [
                                   Text(
                                     'No domain rules yet',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(fontWeight: FontWeight.w800),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Tap the "Add domain" button above to start blocking websites. Keep your child’s web browsing safe and secure.',
                                     textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppColors.muted,
-                                      fontSize: 15,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: AppColors.muted,
+                                          fontSize: 15,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -454,7 +497,8 @@ class _WebsitesSection extends StatelessWidget {
                       for (final rule in controller.websiteRules) ...[
                         _WebsiteRuleCard(
                           rule: rule,
-                          onToggle: (value) => controller.toggleWebsiteRule(rule, value),
+                          onToggle: (value) =>
+                              controller.toggleWebsiteRule(rule, value),
                           onDelete: () => controller.removeWebsiteRule(rule),
                         ),
                         const SizedBox(height: AppSizes.cardGap),
@@ -556,7 +600,9 @@ class _ReportsSection extends StatelessWidget {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.5),
                 width: 1,
               ),
               boxShadow: [
@@ -581,7 +627,9 @@ class _ReportsSection extends StatelessWidget {
                   _UsageBar(
                     label: app.name,
                     valueLabel: _formatMinutes(app.weeklyUsageMinutes),
-                    progress: maxWeekly == 0 ? 0 : app.weeklyUsageMinutes / maxWeekly,
+                    progress: maxWeekly == 0
+                        ? 0
+                        : app.weeklyUsageMinutes / maxWeekly,
                     color: _categoryColor(app.category),
                     icon: _categoryIcon(app.category),
                   ),

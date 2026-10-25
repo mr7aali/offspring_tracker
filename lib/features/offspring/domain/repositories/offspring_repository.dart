@@ -16,6 +16,12 @@ abstract class OffspringRepository {
     required String pairingCode,
   });
 
+  /// Creates the device record for this phone when used in self mode.
+  Future<ChildDevice> createSelfDevice({
+    required String ownerName,
+    required String deviceName,
+  });
+
   Future<List<TrackedApp>> getApps(String deviceId);
 
   Future<void> syncInstalledApps(String deviceId, List<InstalledApp> apps);

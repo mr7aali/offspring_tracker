@@ -87,6 +87,33 @@ class OffspringLocalDataSource {
     return List.unmodifiable(_devices);
   }
 
+  /// Creates the record for this phone in self mode (not linked to a parent).
+  /// It has no pairing code, so it can never be claimed with one.
+  Future<ChildDeviceModel> createSelfDevice({
+    required String ownerName,
+    required String deviceName,
+  }) async {
+    final id = 'self-device-${DateTime.now().microsecondsSinceEpoch}';
+    final now = DateTime.now();
+    final device = ChildDeviceModel(
+      id: id,
+      childName: ownerName,
+      deviceName: deviceName,
+      platform: 'Android',
+      pairingCode: '',
+      isOnline: true,
+      usageAccessEnabled: true,
+      vpnFilterEnabled: false,
+      backgroundServiceRunning: true,
+      protectedModeEnabled: false,
+      lastSyncAt: now,
+      lastOnlineAt: now,
+    );
+    _devices.add(device);
+    _apps.addAll(_starterAppsFor(id, now));
+    return device;
+  }
+
   Future<ChildDeviceModel> pairDevice({
     required String childName,
     required String deviceName,
