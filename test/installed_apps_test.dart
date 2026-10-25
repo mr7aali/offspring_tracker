@@ -55,6 +55,19 @@ void main() {
     },
   );
 
+  test('first real scan drops sample blocks and limits', () async {
+    final source = OffspringLocalDataSource();
+    final seeded = await source.getApps('device-1');
+    expect(
+      seeded.any((app) => app.isBlocked || app.hasLimit),
+      isTrue,
+      reason: 'sample data should include rules for this test to matter',
+    );
+    await source.syncInstalledApps('device-1', [chrome, notes]);
+    final apps = await source.getApps('device-1');
+    expect(apps.any((app) => app.isBlocked || app.hasLimit), isFalse);
+  });
+
   test(
     'updates preserve IDs and rules; uninstall removes app; new install alerts once',
     () async {

@@ -6,12 +6,15 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
 /** Inventory of launchable apps in the current Android user/profile. */
@@ -26,7 +29,13 @@ class InstalledAppsPlugin(context: Context, messenger: BinaryMessenger) {
 
     init {
         methods.setMethodCallHandler { call, result ->
-            if (call.method != "getInstalledApps") {
+            if (call.method == "getAppIcon") {
+                val packageName = call.argument<String>("packageName")
+                executor.execute {
+                    val icon = packageName?.let { iconPng(it) }
+                    main.post { if (!disposed) result.success(icon) }
+                }
+            } else if (call.method != "getInstalledApps") {
                 result.notImplemented()
             } else {
                 executor.execute {
@@ -91,6 +100,22 @@ class InstalledAppsPlugin(context: Context, messenger: BinaryMessenger) {
                     "category" to category(info)
                 )
             }.sortedBy { it["name"]?.lowercase() }
+    }
+
+    /** The app's launcher icon as a PNG, or null if it is not installed. */
+    private fun iconPng(packageName: String): ByteArray? = try {
+        val drawable = context.packageManager.getApplicationIcon(packageName)
+        val size = 96
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(Canvas(bitmap))
+        ByteArrayOutputStream().use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            bitmap.recycle()
+            out.toByteArray()
+        }
+    } catch (_: Exception) {
+        null
     }
 
     private fun category(info: ApplicationInfo): String {

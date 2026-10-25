@@ -28,30 +28,57 @@ object UsageReader {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    /** Foreground milliseconds per package since midnight. */
+    /**
+     * Foreground milliseconds per package since midnight.
+     *
+     * Only one app is treated as on screen at a time, and time stops when the
+     * screen turns off or locks, so the total can never exceed the time since
+     * midnight.
+     */
     fun todayMillis(context: Context): Map<String, Long> {
         if (!hasAccess(context)) return emptyMap()
         val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val now = System.currentTimeMillis()
-        val events = manager.queryEvents(startOfToday(), now)
+        val midnight = startOfToday()
+        // Look back a little so an app opened before midnight is counted from midnight.
+        val events = manager.queryEvents(midnight - LOOKBACK_MS, now)
         val totals = HashMap<String, Long>()
-        val openedAt = HashMap<String, Long>()
+        var current: String? = null
+        var startedAt = 0L
+
+        fun close(at: Long) {
+            val pkg = current ?: return
+            val from = maxOf(startedAt, midnight)
+            if (at > from) totals[pkg] = (totals[pkg] ?: 0L) + (at - from)
+            current = null
+        }
+
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val pkg = event.packageName ?: continue
             when (event.eventType) {
-                // Same values as ACTIVITY_RESUMED / ACTIVITY_PAUSED on newer Android.
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> openedAt.putIfAbsent(pkg, event.timeStamp)
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> openedAt.remove(pkg)?.let { start ->
-                    totals[pkg] = (totals[pkg] ?: 0L) + (event.timeStamp - start)
+                ACTIVITY_RESUMED -> if (pkg != current) {
+                    close(event.timeStamp)
+                    current = pkg
+                    startedAt = event.timeStamp
                 }
+                ACTIVITY_PAUSED, ACTIVITY_STOPPED -> if (pkg == current) close(event.timeStamp)
+                SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN, DEVICE_SHUTDOWN -> close(event.timeStamp)
             }
         }
-        // Apps still open right now.
-        for ((pkg, start) in openedAt) totals[pkg] = (totals[pkg] ?: 0L) + (now - start)
+        close(now) // the app on screen right now
         return totals
     }
+
+    // UsageEvents.Event type values (stable across Android versions).
+    private const val ACTIVITY_RESUMED = 1
+    private const val ACTIVITY_PAUSED = 2
+    private const val SCREEN_NON_INTERACTIVE = 16
+    private const val KEYGUARD_SHOWN = 17
+    private const val ACTIVITY_STOPPED = 23
+    private const val DEVICE_SHUTDOWN = 26
+    private const val LOOKBACK_MS = 3L * 60 * 60 * 1000
 
     /** Foreground milliseconds per package over the last 7 days. */
     fun weekMillis(context: Context): Map<String, Long> {

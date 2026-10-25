@@ -52,15 +52,11 @@ class _AppRuleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // App Icon (Squircle)
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(_categoryIcon(app.category), color: color, size: 24),
+          AppIconImage(
+            packageName: app.packageName,
+            fallbackIcon: _categoryIcon(app.category),
+            color: color,
+            isBlocked: isBlocked,
           ),
           const SizedBox(width: 14),
           // Titles and Minimal Progress

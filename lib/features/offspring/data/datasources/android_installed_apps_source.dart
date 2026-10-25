@@ -23,6 +23,19 @@ class AndroidInstalledAppsSource implements InstalledAppsSource {
   Stream<void> get changes => isSupported ? _changes : const Stream.empty();
 
   @override
+  Future<Uint8List?> loadIcon(String packageName) async {
+    if (!isSupported) return null;
+    try {
+      return await channel.invokeMethod<Uint8List>('getAppIcon', {
+        'packageName': packageName,
+      });
+    } catch (_) {
+      // Missing icons fall back to the category symbol.
+      return null;
+    }
+  }
+
+  @override
   Future<List<InstalledApp>> discover() async {
     if (!isSupported) throw UnsupportedError('Android is required');
     final rows = await channel.invokeListMethod<Object?>('getInstalledApps');

@@ -46,8 +46,11 @@ class OffspringLocalDataSource {
             name: app.name,
             packageName: app.packageName,
             category: app.category,
-            isBlocked: previous?.isBlocked ?? false,
-            dailyLimitMinutes: previous?.dailyLimitMinutes ?? 0,
+            // Sample rules are not the user's; the first real scan starts clean.
+            isBlocked: isFirstScan ? false : previous?.isBlocked ?? false,
+            dailyLimitMinutes: isFirstScan
+                ? 0
+                : previous?.dailyLimitMinutes ?? 0,
             // Seeded usage is not telemetry from this phone.
             usageTodayMinutes: isFirstScan
                 ? 0

@@ -21,6 +21,7 @@ import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/pair_child_device_dialog.dart';
+import '../widgets/app_icon_image.dart';
 import '../widgets/rule_editor_sheets.dart';
 
 part '../widgets/dashboard/dashboard_drawer.dart';

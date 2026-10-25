@@ -97,9 +97,9 @@ class WebFilterVpnService : VpnService() {
     private fun handlePacket(packet: ByteArray, output: FileOutputStream) {
         val query = DnsPacket.parse(packet) ?: return
         val answer = if (BlockingRules.load(this).isSiteBlocked(query.host)) {
-            query.notFoundAnswer()
+            query.blockedAnswer()
         } else {
-            forward(query.dnsPayload) ?: return
+            DnsPacket.capTtl(forward(query.dnsPayload) ?: return)
         }
         val response = query.wrapResponse(answer)
         synchronized(output) {
@@ -165,13 +165,41 @@ private class DnsPacket(
     val host: String,
     private val questionEnd: Int,
 ) {
-    /** A "domain not found" reply that keeps the original question. */
-    fun notFoundAnswer(): ByteArray {
-        val reply = dnsPayload.copyOf(questionEnd)
-        reply[2] = (0x80 or (dnsPayload[2].toInt() and 0x01)).toByte() // response, keep RD
-        reply[3] = (0x80 or 0x03).toByte() // RA, NXDOMAIN
-        for (i in 6..11) reply[i] = 0 // no answer/authority/additional records
-        return reply
+    /**
+     * Reply for a blocked site: address 0.0.0.0 (or :: for IPv6), valid for
+     * one second. Unlike "domain not found", phones and browsers do not keep
+     * this answer, so the site works again as soon as it is unblocked.
+     */
+    fun blockedAnswer(): ByteArray {
+        val queryType = readShort(dnsPayload, questionEnd - 4)
+        val out = java.io.ByteArrayOutputStream()
+        out.write(dnsPayload, 0, 2) // same ID
+        out.write(0x80 or (dnsPayload[2].toInt() and 0x01)) // response, keep RD
+        out.write(0x80) // RA, no error
+        val hasAddress = queryType == TYPE_A || queryType == TYPE_AAAA
+        out.write(byteArrayOf(0, 1)) // 1 question
+        out.write(byteArrayOf(0, if (hasAddress) 1 else 0)) // answers
+        out.write(byteArrayOf(0, if (hasAddress) 0 else 1)) // authority (SOA)
+        out.write(byteArrayOf(0, 0)) // additional
+        out.write(dnsPayload, 12, questionEnd - 12) // the question
+        out.write(byteArrayOf(0xC0.toByte(), 0x0C)) // name: pointer to the question
+        when (queryType) {
+            TYPE_A -> {
+                out.write(byteArrayOf(0, TYPE_A.toByte(), 0, 1, 0, 0, 0, 1, 0, 4))
+                out.write(ByteArray(4)) // 0.0.0.0
+            }
+            TYPE_AAAA -> {
+                out.write(byteArrayOf(0, TYPE_AAAA.toByte(), 0, 1, 0, 0, 0, 1, 0, 16))
+                out.write(ByteArray(16)) // ::
+            }
+            else -> {
+                // "No records of this type", with a 1-second negative TTL.
+                out.write(byteArrayOf(0, 6, 0, 1, 0, 0, 0, 1, 0, 22))
+                out.write(byteArrayOf(0, 0)) // primary server, responsible mailbox: root
+                out.write(byteArrayOf(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1))
+            }
+        }
+        return out.toByteArray()
     }
 
     /** Wraps a DNS reply in IPv4 + UDP headers addressed back to the asker. */
@@ -198,6 +226,61 @@ private class DnsPacket(
     }
 
     companion object {
+        private const val TYPE_A = 1
+        private const val TYPE_AAAA = 28
+        private const val TYPE_OPT = 41
+        private const val MAX_TTL_SECONDS = 60L
+
+        /**
+         * Shortens how long the phone may remember a normal answer, so a
+         * newly blocked site takes effect within a minute. Returns the reply
+         * unchanged if it cannot be read.
+         */
+        fun capTtl(reply: ByteArray): ByteArray {
+            val out = reply.copyOf()
+            try {
+                val questions = readShort(out, 4)
+                val records = readShort(out, 6) + readShort(out, 8) + readShort(out, 10)
+                var pos = 12
+                repeat(questions) { pos = skipName(out, pos) + 4 }
+                repeat(records) {
+                    pos = skipName(out, pos)
+                    val type = readShort(out, pos)
+                    val ttlAt = pos + 4
+                    val length = readShort(out, pos + 8)
+                    if (type != TYPE_OPT) {
+                        val ttl = ((out[ttlAt].toLong() and 0xFF) shl 24) or
+                            ((out[ttlAt + 1].toLong() and 0xFF) shl 16) or
+                            ((out[ttlAt + 2].toLong() and 0xFF) shl 8) or
+                            (out[ttlAt + 3].toLong() and 0xFF)
+                        if (ttl > MAX_TTL_SECONDS) {
+                            out[ttlAt] = 0
+                            out[ttlAt + 1] = 0
+                            out[ttlAt + 2] = 0
+                            out[ttlAt + 3] = MAX_TTL_SECONDS.toByte()
+                        }
+                    }
+                    pos += 10 + length
+                    if (pos > out.size) return reply
+                }
+            } catch (_: IndexOutOfBoundsException) {
+                return reply
+            }
+            return out
+        }
+
+        private fun skipName(data: ByteArray, start: Int): Int {
+            var pos = start
+            while (true) {
+                val length = data[pos].toInt() and 0xFF
+                when {
+                    length == 0 -> return pos + 1
+                    length and 0xC0 == 0xC0 -> return pos + 2
+                    else -> pos += 1 + length
+                }
+            }
+        }
+
         fun parse(ip: ByteArray): DnsPacket? {
             if (ip.size < 28 || (ip[0].toInt() shr 4) != 4) return null
             val headerLength = (ip[0].toInt() and 0x0F) * 4

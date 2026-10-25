@@ -20,6 +20,7 @@ import '../../domain/entities/child_device.dart';
 import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
+import '../widgets/app_icon_image.dart';
 import '../widgets/rule_editor_sheets.dart';
 import '../../domain/repositories/device_protection.dart';
 
@@ -2437,14 +2438,12 @@ class _CompactLimitTile extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppSizes.radius),
-              ),
-              child: Icon(_categoryIcon(app.category), color: color),
+            AppIconImage(
+              packageName: app.packageName,
+              fallbackIcon: _categoryIcon(app.category),
+              color: color,
+              size: 42,
+              isBlocked: app.isBlocked,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -2546,19 +2545,11 @@ class _ChildAppRuleTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // App Icon (Squircle)
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isBlocked ? Icons.lock : _categoryIcon(app.category),
-              color: color,
-              size: 24,
-            ),
+          AppIconImage(
+            packageName: app.packageName,
+            fallbackIcon: _categoryIcon(app.category),
+            color: color,
+            isBlocked: isBlocked,
           ),
           const SizedBox(width: 14),
           // Titles and Minimal Progress
@@ -2880,10 +2871,11 @@ class _ChildUsageReportCard extends StatelessWidget {
             for (final app in top) ...[
               Row(
                 children: [
-                  Icon(
-                    _categoryIcon(app.category),
-                    size: 18,
+                  AppIconImage(
+                    packageName: app.packageName,
+                    fallbackIcon: _categoryIcon(app.category),
                     color: _categoryColor(app.category),
+                    size: 24,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
