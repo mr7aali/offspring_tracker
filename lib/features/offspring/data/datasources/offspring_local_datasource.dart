@@ -5,6 +5,7 @@ import '../../domain/entities/alert_notification.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/subscription_plan.dart';
 import '../../domain/entities/tracked_app.dart';
+import '../../domain/repositories/device_protection.dart';
 import '../models/alert_notification_model.dart';
 import '../models/child_device_model.dart';
 import '../models/tracked_app_model.dart';
@@ -21,6 +22,7 @@ class OffspringLocalDataSource {
   final List<AlertNotificationModel> _notifications = [];
   String _currentPlanId = 'premium';
   final Set<String> _nativeInventoryDevices = {};
+  int _websiteRuleSequence = 0;
 
   Future<void> syncInstalledApps(
     String deviceId,
@@ -80,6 +82,24 @@ class OffspringLocalDataSource {
           ),
         );
       }
+    }
+  }
+
+  Future<void> updateAppUsage(
+    String deviceId,
+    Map<String, AppUsage> usage,
+  ) async {
+    for (var i = 0; i < _apps.length; i++) {
+      final app = _apps[i];
+      if (app.deviceId != deviceId) continue;
+      final appUsage = usage[app.packageName];
+      _apps[i] = TrackedAppModel.fromEntity(
+        app.copyWith(
+          usageTodayMinutes: appUsage?.todayMinutes ?? 0,
+          weeklyUsageMinutes: appUsage?.weekMinutes ?? 0,
+          blockedAttempts: appUsage?.blockedAttempts ?? 0,
+        ),
+      );
     }
   }
 
@@ -220,7 +240,8 @@ class OffspringLocalDataSource {
     }
 
     final rule = WebsiteRuleModel(
-      id: 'website-${_websiteRules.length + 1}',
+      // Unique even after deletions, so a rule never shares another's ID.
+      id: 'website-${DateTime.now().microsecondsSinceEpoch}-${_websiteRuleSequence++}',
       deviceId: deviceId,
       domain: normalizedDomain,
       includesSubdomains: includesSubdomains,

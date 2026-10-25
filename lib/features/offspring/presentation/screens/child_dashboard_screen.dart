@@ -21,6 +21,7 @@ import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/rule_editor_sheets.dart';
+import '../../domain/repositories/device_protection.dart';
 
 enum ChildDashboardSection { overview, apps, websites, alerts, device }
 
@@ -75,6 +76,10 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
       appDependencies.dashboardController;
 
   ChildDashboardSection _section = ChildDashboardSection.overview;
+  final _protection = _ProtectionController();
+
+  /// Rules last sent to the phone, so unchanged rules are not re-sent.
+  String? _appliedRulesKey;
   StreamSubscription<void>? _inventorySubscription;
   bool _refreshing = false;
   bool _refreshPending = false;
@@ -87,6 +92,8 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _dashboardController.addListener(_syncRulesToPhone);
+    appDependencies.childSessionController.addListener(_syncRulesToPhone);
     if (_discoverApps) {
       _inventorySubscription = appDependencies
           .refreshInstalledApps
@@ -117,6 +124,9 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _dashboardController.removeListener(_syncRulesToPhone);
+    appDependencies.childSessionController.removeListener(_syncRulesToPhone);
+    _protection.dispose();
     _inventorySubscription?.cancel();
     super.dispose();
   }
@@ -151,6 +161,12 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
                 device.id) {
           return;
         }
+        await _protection.refresh();
+        try {
+          await appDependencies.refreshAppUsage(device.id);
+        } catch (_) {
+          // Screen time is optional; keep the last known values.
+        }
         await _dashboardController.load(selectedDeviceId: device.id);
       } while (mounted && _refreshPending);
     } finally {
@@ -162,7 +178,39 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
     setState(() => _section = section);
   }
 
+  /// Sends self-mode rules to the phone's blocker whenever they change, and
+  /// clears them when this phone leaves self mode.
+  void _syncRulesToPhone() {
+    final protection = appDependencies.deviceProtection;
+    final session = appDependencies.childSessionController;
+    if (!session.isSelfMode) {
+      if (_appliedRulesKey != null) {
+        _appliedRulesKey = null;
+        protection.clearRules();
+      }
+      return;
+    }
+    final controller = _dashboardController;
+    if (controller.isLoading ||
+        controller.selectedDevice?.id != session.currentDevice?.id) {
+      return;
+    }
+    final key = _rulesKey(controller.apps, controller.websiteRules);
+    if (key == _appliedRulesKey) return;
+    _appliedRulesKey = key;
+    protection.applyRules(
+      apps: controller.apps,
+      websites: controller.websiteRules,
+    );
+  }
+
   void _logout() {
+    if (appDependencies.childSessionController.isSelfMode) {
+      // Leaving self mode removes this phone's blocks.
+      _appliedRulesKey = null;
+      appDependencies.deviceProtection.clearRules();
+      appDependencies.deviceProtection.stopWebFilter();
+    }
     appDependencies.childSessionController.logout();
     Navigator.of(
       context,
@@ -175,6 +223,7 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
       animation: Listenable.merge([
         appDependencies.childSessionController,
         _dashboardController,
+        _protection,
       ]),
       builder: (context, _) {
         final sessionDevice =
@@ -187,6 +236,7 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
         final data = _ChildDashboardData.fromController(
           sessionDevice: sessionDevice,
           controller: _dashboardController,
+          protection: _protection,
         );
         final isWide = MediaQuery.sizeOf(context).width >= 900;
 
@@ -269,11 +319,16 @@ class _ChildDashboardScreenState extends State<ChildDashboardScreen>
                     ),
                   ],
                 ),
-              if (_discoverApps)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              if (_discoverApps && !_protection.status.usageAccessGranted)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Text(
-                    'Apps installed on this phone. Usage tracking is not active yet.',
+                    data.canManage
+                        ? 'Screen time is not tracked yet. Allow usage access on the Apps tab to see it.'
+                        : 'Apps installed on this phone. Usage tracking is not active yet.',
                   ),
                 ),
               Expanded(
@@ -334,11 +389,13 @@ class _ChildDashboardData {
     required this.notifications,
     required this.hasLoadedDevice,
     required this.canManage,
+    required this.protection,
   });
 
   factory _ChildDashboardData.fromController({
     required ChildDevice sessionDevice,
     required DashboardController controller,
+    required _ProtectionController protection,
   }) {
     final selectedDevice = controller.selectedDevice;
     final hasLoadedDevice = selectedDevice?.id == sessionDevice.id;
@@ -355,6 +412,7 @@ class _ChildDashboardData {
           .toList(),
       hasLoadedDevice: hasLoadedDevice,
       canManage: appDependencies.childSessionController.isSelfMode,
+      protection: protection,
     );
   }
 
@@ -366,6 +424,9 @@ class _ChildDashboardData {
 
   /// True in self mode: the user manages this phone's rules themselves.
   final bool canManage;
+
+  /// Blocking setup on this phone (self mode).
+  final _ProtectionController protection;
 
   int get totalUsageToday {
     return apps.fold<int>(0, (total, app) => total + app.usageTodayMinutes);
@@ -1520,6 +1581,10 @@ class _ChildAppsSection extends StatelessWidget {
               ? 'Block apps and set daily limits for this phone.'
               : 'See daily limits, usage, blocked apps, and remaining time for this device.',
         ),
+        if (data.canManage) ...[
+          const SizedBox(height: AppSizes.sectionGap),
+          _AppBlockingSetupCard(protection: data.protection),
+        ],
         const SizedBox(height: AppSizes.sectionGap),
         _ChildMetricGrid(
           children: [
@@ -1613,6 +1678,10 @@ class _ChildWebsitesSection extends StatelessWidget {
                 )
               : null,
         ),
+        if (data.canManage) ...[
+          const SizedBox(height: AppSizes.sectionGap),
+          _WebFilterSetupCard(protection: data.protection),
+        ],
         const SizedBox(height: AppSizes.sectionGap),
         _ChildMetricGrid(
           children: [
@@ -2543,23 +2612,22 @@ class _ChildAppRuleTile extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 6),
-                Row(
+                // Wraps onto a second line on narrow screens.
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Flexible(
-                      child: Text(
-                        isBlocked
-                            ? (_canManage ? 'Blocked' : 'Blocked by parent')
-                            : app.category.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Text(
+                      isBlocked
+                          ? (_canManage ? 'Blocked' : 'Blocked by parent')
+                          : app.category.label,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const Spacer(),
                     if (onLimitTap != null)
                       _LimitLink(hasLimit: hasLimit, onTap: onLimitTap!),
                     if (app.blockedAttempts > 0)
@@ -2897,6 +2965,349 @@ class _SelfModeConnectionCard extends StatelessWidget {
               ),
               icon: const Icon(Icons.link_rounded),
               label: const Text('Connect to a parent'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Self mode: blocking setup on this phone
+// ---------------------------------------------------------------------------
+
+/// Signature of the rules the phone enforces; used to skip unchanged syncs.
+String _rulesKey(List<TrackedApp> apps, List<WebsiteRule> websites) {
+  final blocked = [
+    for (final app in apps)
+      if (app.isBlocked) app.packageName,
+  ]..sort();
+  final limits = [
+    for (final app in apps)
+      if (app.hasLimit) '${app.packageName}=${app.dailyLimitMinutes}',
+  ]..sort();
+  final sites = [
+    for (final rule in websites)
+      if (rule.isBlocked) '${rule.domain}:${rule.includesSubdomains}',
+  ]..sort();
+  return '${blocked.join(',')}|${limits.join(',')}|${sites.join(',')}';
+}
+
+/// Tracks what the phone allows for blocking and turns features on or off.
+class _ProtectionController extends ChangeNotifier {
+  ProtectionStatus status = ProtectionStatus.unsupported;
+  bool isBusy = false;
+  bool _disposed = false;
+
+  DeviceProtection get _protection => appDependencies.deviceProtection;
+
+  Future<void> refresh() async {
+    final next = await _protection.status();
+    if (_disposed) return;
+    status = next;
+    notifyListeners();
+  }
+
+  Future<void> openAppBlockingSettings() =>
+      _protection.openAppBlockingSettings();
+
+  Future<void> openUsageAccessSettings() =>
+      _protection.openUsageAccessSettings();
+
+  /// Returns false if the user declined the VPN permission.
+  Future<bool> setWebFilter(bool enabled) async {
+    if (isBusy) return true;
+    isBusy = true;
+    notifyListeners();
+    var accepted = true;
+    try {
+      if (enabled) {
+        accepted = await _protection.startWebFilter();
+      } else {
+        await _protection.stopWebFilter();
+      }
+      // The VPN starts in the background; give it a moment before checking.
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await refresh();
+    } finally {
+      isBusy = false;
+      if (!_disposed) notifyListeners();
+    }
+    return accepted;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+/// Apps tab: app blocker and usage access.
+class _AppBlockingSetupCard extends StatelessWidget {
+  const _AppBlockingSetupCard({required this.protection});
+
+  final _ProtectionController protection;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = protection.status;
+    if (!status.isSupported) {
+      return const _ProtectionUnsupportedCard(
+        message:
+            'App blocking works on Android phones. Rules you set here are saved and shown, but not enforced on this device.',
+      );
+    }
+    final ready = status.appBlockingEnabled && status.usageAccessGranted;
+    return _ProtectionCard(
+      title: 'Blocking on this phone',
+      isReady: ready,
+      rows: [
+        _ProtectionRow(
+          icon: Icons.block_rounded,
+          title: 'App blocking',
+          description: status.appBlockingEnabled
+              ? 'Blocked apps are closed as soon as they open.'
+              : 'Opens Accessibility settings. Choose "Offspring Tracker app blocking" and turn it on.',
+          isOn: status.appBlockingEnabled,
+          actionLabel: 'Turn on',
+          onAction: protection.openAppBlockingSettings,
+        ),
+        _ProtectionRow(
+          icon: Icons.timer_outlined,
+          title: 'Usage access',
+          description: status.usageAccessGranted
+              ? 'Daily limits are enforced and screen time is shown.'
+              : 'Needed for daily limits and real screen time. Allow it for Offspring Tracker.',
+          isOn: status.usageAccessGranted,
+          actionLabel: 'Allow',
+          onAction: protection.openUsageAccessSettings,
+        ),
+      ],
+    );
+  }
+}
+
+/// Sites tab: the website filter.
+class _WebFilterSetupCard extends StatelessWidget {
+  const _WebFilterSetupCard({required this.protection});
+
+  final _ProtectionController protection;
+
+  Future<void> _toggle(BuildContext context, bool enable) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final accepted = await protection.setWebFilter(enable);
+    if (!accepted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The website filter needs VPN permission to block sites.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = protection.status;
+    if (!status.isSupported) {
+      return const _ProtectionUnsupportedCard(
+        message:
+            'Website blocking works on Android phones. Rules you set here are saved and shown, but not enforced on this device.',
+      );
+    }
+    final isOn = status.webFilterActive;
+    return _ProtectionCard(
+      title: 'Website filter',
+      isReady: isOn,
+      rows: [
+        _ProtectionRow(
+          icon: Icons.public_off_rounded,
+          title: isOn ? 'Filter is on' : 'Filter is off',
+          description: isOn
+              ? 'Blocked sites below will not load in any browser on this phone.'
+              : 'Turn it on to block the sites below in every browser. It runs only on this phone and does not send your browsing anywhere.',
+          isOn: isOn,
+          actionLabel: protection.isBusy
+              ? 'Please wait'
+              : isOn
+              ? 'Turn off'
+              : 'Turn on',
+          showActionWhenOn: true,
+          onAction: protection.isBusy ? null : () => _toggle(context, !isOn),
+        ),
+      ],
+      footnote:
+          'Uses a VPN on this phone. If Private DNS is set to a specific provider in Android settings, sites may still load.',
+    );
+  }
+}
+
+class _ProtectionCard extends StatelessWidget {
+  const _ProtectionCard({
+    required this.title,
+    required this.isReady,
+    required this.rows,
+    this.footnote,
+  });
+
+  final String title;
+  final bool isReady;
+  final List<Widget> rows;
+  final String? footnote;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                StatusPill(
+                  label: isReady ? 'Active' : 'Setup needed',
+                  icon: isReady
+                      ? Icons.verified_user_outlined
+                      : Icons.warning_amber_rounded,
+                  color: isReady ? AppColors.secondary : AppColors.accent,
+                ),
+              ],
+            ),
+            for (final row in rows) ...[const SizedBox(height: 14), row],
+            if (footnote != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                footnote!,
+                style: textTheme.bodySmall?.copyWith(color: AppColors.muted),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProtectionRow extends StatelessWidget {
+  const _ProtectionRow({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.isOn,
+    required this.actionLabel,
+    required this.onAction,
+    this.showActionWhenOn = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isOn;
+  final String actionLabel;
+  final VoidCallback? onAction;
+  final bool showActionWhenOn;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isOn ? AppColors.secondary : AppColors.muted;
+    final showAction = !isOn || showActionWhenOn;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  if (isOn) ...[
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: AppColors.secondary,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+              ),
+              if (showAction) ...[
+                const SizedBox(height: 8),
+                isOn
+                    ? OutlinedButton(
+                        onPressed: onAction,
+                        child: Text(actionLabel),
+                      )
+                    : FilledButton(
+                        onPressed: onAction,
+                        child: Text(actionLabel),
+                      ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProtectionUnsupportedCard extends StatelessWidget {
+  const _ProtectionUnsupportedCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.muted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+              ),
             ),
           ],
         ),

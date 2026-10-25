@@ -6,7 +6,10 @@ import '../features/auth/domain/usecases/register_usecase.dart';
 import '../features/auth/presentation/controllers/auth_controller.dart';
 import '../features/offspring/data/datasources/offspring_local_datasource.dart';
 import '../features/offspring/data/datasources/android_installed_apps_source.dart';
+import '../features/offspring/data/datasources/android_device_protection.dart';
+import '../features/offspring/domain/repositories/device_protection.dart';
 import '../features/offspring/domain/usecases/refresh_installed_apps_usecase.dart';
+import '../features/offspring/domain/usecases/refresh_app_usage_usecase.dart';
 import '../features/offspring/data/repositories/offspring_repository_impl.dart';
 import '../features/offspring/domain/usecases/load_dashboard_usecase.dart';
 import '../features/offspring/domain/usecases/connect_child_device_usecase.dart';
@@ -30,9 +33,16 @@ void setupDependencies() {
   final offspringDataSource = OffspringLocalDataSource();
   final offspringRepository = OffspringRepositoryImpl(offspringDataSource);
 
+  final deviceProtection = AndroidDeviceProtection();
+
   appDependencies = AppDependencies(
     refreshInstalledApps: RefreshInstalledAppsUseCase(
       AndroidInstalledAppsSource(),
+      offspringRepository,
+    ),
+    deviceProtection: deviceProtection,
+    refreshAppUsage: RefreshAppUsageUseCase(
+      deviceProtection,
       offspringRepository,
     ),
     appMode: Env.appMode,
@@ -62,6 +72,8 @@ void setupDependencies() {
 class AppDependencies {
   const AppDependencies({
     required this.refreshInstalledApps,
+    required this.deviceProtection,
+    required this.refreshAppUsage,
     required this.appMode,
     required this.notificationService,
     required this.authController,
@@ -71,6 +83,8 @@ class AppDependencies {
 
   final String appMode;
   final RefreshInstalledAppsUseCase refreshInstalledApps;
+  final DeviceProtection deviceProtection;
+  final RefreshAppUsageUseCase refreshAppUsage;
   final NotificationService notificationService;
   final AuthController authController;
   final ChildSessionController childSessionController;

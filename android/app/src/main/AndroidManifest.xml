@@ -1,4 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Website filter forwards normal DNS lookups. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Daily limits and screen time; the user grants this in Settings. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
     <application
         android:label="offspring_tracker"
         android:name="${applicationName}"
@@ -25,6 +32,36 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Shown when a blocked app is opened. -->
+        <activity
+            android:name=".BlockedActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.example.offspring_tracker.blocked"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <!-- Closes blocked apps. Turned on by the user in Accessibility settings. -->
+        <service
+            android:name=".AppBlockerService"
+            android:exported="false"
+            android:label="@string/app_blocker_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/app_blocker_service" />
+        </service>
+        <!-- Website filter: a local, DNS-only VPN. -->
+        <service
+            android:name=".WebFilterVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

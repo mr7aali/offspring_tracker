@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_blocker_label">Offspring Tracker app blocking</string>
+    <string name="app_blocker_description">Lets Offspring Tracker close apps you have blocked or that have used up their daily limit. It only checks which app is open and does not read what is on the screen.</string>
+</resources>

@@ -6,6 +6,21 @@ import 'package:offspring_tracker/config/dependency_injection.dart';
 
 void main() {
   setUp(setupDependencies);
+  // This phone reports no blocking support in these tests.
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('offspring_tracker/protection'),
+          (_) async => null,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('offspring_tracker/protection'),
+          null,
+        );
+  });
   setUp(() {
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;

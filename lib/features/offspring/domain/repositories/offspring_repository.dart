@@ -6,6 +6,7 @@ import '../entities/dashboard_summary.dart';
 import '../entities/subscription_plan.dart';
 import '../entities/tracked_app.dart';
 import '../entities/website_rule.dart';
+import 'device_protection.dart';
 
 abstract class OffspringRepository {
   Future<List<ChildDevice>> getDevices();
@@ -25,6 +26,9 @@ abstract class OffspringRepository {
   Future<List<TrackedApp>> getApps(String deviceId);
 
   Future<void> syncInstalledApps(String deviceId, List<InstalledApp> apps);
+
+  /// Stores real screen time read from the phone, keyed by package name.
+  Future<void> updateAppUsage(String deviceId, Map<String, AppUsage> usage);
 
   Future<TrackedApp> updateAppRule({
     required String appId,

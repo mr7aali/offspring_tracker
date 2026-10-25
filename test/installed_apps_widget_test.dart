@@ -13,6 +13,21 @@ void main() {
   var scans = 0;
   var failScan = false;
   var rows = <Map<String, String>>[];
+  // This phone reports no blocking support in these tests.
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('offspring_tracker/protection'),
+          (_) async => null,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('offspring_tracker/protection'),
+          null,
+        );
+  });
   setUp(() {
     setupDependencies();
     scans = 0;

@@ -6,6 +6,7 @@ import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/subscription_plan.dart';
 import '../../domain/entities/tracked_app.dart';
 import '../../domain/entities/website_rule.dart';
+import '../../domain/repositories/device_protection.dart';
 import '../../domain/repositories/offspring_repository.dart';
 import '../datasources/offspring_local_datasource.dart';
 
@@ -35,6 +36,11 @@ class OffspringRepositoryImpl implements OffspringRepository {
       deviceName: deviceName,
       pairingCode: pairingCode,
     );
+  }
+
+  @override
+  Future<void> updateAppUsage(String deviceId, Map<String, AppUsage> usage) {
+    return _localDataSource.updateAppUsage(deviceId, usage);
   }
 
   @override
